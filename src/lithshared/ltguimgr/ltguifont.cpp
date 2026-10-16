@@ -273,3 +273,21 @@ LTBOOL CLTGUIFont::IsChromaKeyed()
 		return LTFALSE;
 	return m_pLithFont->IsChromaKeyed();
 }
+
+#ifdef NOLFSRC_MODERN
+#include "..\lithfontmgr\lithbitmapfont.h"
+
+// M-P3-23
+void CLTGUIFont::SetScale(LTFLOAT fScale)
+{
+	if (m_pLithFont && !m_pLithFont->IsSystemFont())
+		((LithBitmapFont*)m_pLithFont)->SetScale(fScale);
+}
+
+LTFLOAT CLTGUIFont::GetScale()
+{
+	if (m_pLithFont && !m_pLithFont->IsSystemFont())
+		return ((LithBitmapFont*)m_pLithFont)->GetScale();
+	return 1.0f;
+}
+#endif

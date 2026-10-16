@@ -499,6 +499,11 @@ LTBOOL CInterfaceResMgr::InitFonts()
 //      CLTGUIFont::SetWrapMethod(LTFALSE);
 //	}
 
+#ifdef NOLFSRC_MODERN
+	// M-P3-23: the menu fonts at the page's scale
+	ScaleMenuFonts();
+#endif
+
     return LTTRUE;
 
 }
@@ -609,8 +614,31 @@ void CInterfaceResMgr::ScreenDimsChanged()
 #ifdef NOLFSRC_MODERN
 	// M-P1-06: size, centre or un-frame the window for the new mode
 	P1Window_Apply();
+
+	// M-P3-23: the menu fonts follow the page
+	ScaleMenuFonts();
 #endif
 }
+
+#ifdef NOLFSRC_MODERN
+// M-P3-23: the five fonts the menus draw with (and the message boxes, the
+// loading screen, dialogue choices and the credits, which use them too) are
+// drawn at the menu page's scale, the screen's height over
+// 480, as the page itself is. The HUD's fonts are left as they are (the
+// HUD has its own scale, M-P3-12). Bitmap fonts only: the engine fonts of
+// other languages are not affected.
+void CInterfaceResMgr::ScaleMenuFonts()
+{
+	LTFLOAT fScale = P3_MenuScale();
+	CLTGUIFont* apFonts[] = { m_pSmallFont, m_pMediumFont, m_pLargeFont, m_pHelpFont, m_pTitleFont };
+
+	for (int i = 0; i < sizeof(apFonts) / sizeof(apFonts[0]); i++)
+	{
+		if (apFonts[i])
+			apFonts[i]->SetScale(fScale);
+	}
+}
+#endif
 
 
 HSURFACE CInterfaceResMgr::GetSurfaceLoading()
