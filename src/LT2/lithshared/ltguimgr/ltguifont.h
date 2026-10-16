@@ -65,6 +65,13 @@ public:
 	LTBOOL	IsChromaKeyed();
 	LTBOOL	IsSystemFont();
 
+#ifdef NOLFSRC_MODERN
+	// M-P3-23: a bitmap font drawn at this many times its image's size
+	// (engine fonts are left as they are)
+	void	SetScale(LTFLOAT fScale);
+	LTFLOAT	GetScale();
+#endif
+
 	// Sets the wrapping method between using spaces and non-space based wrapping (Japanese)
 	// Note that non-space based wrapping only works with engine fonts.
     static  void    SetWrapMethod(LTBOOL bUseSpaces)     { s_bWrapUseSpaces=bUseSpaces; }

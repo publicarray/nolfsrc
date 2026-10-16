@@ -42,6 +42,13 @@ Since the first public release:
   file the installer writes; `linux-install.sh` and `windows-install.bat`
   check the directory against it first, and stop if a file is missing,
   changed or not part of the release.
+- **Menu text grows with the screen.** The menus' text was the same size at
+  every resolution, so on a large screen it was small inside a full-screen
+  menu (and half that again at 4K); it is now drawn at the menu page's scale,
+  as on a 640x480 screen, and check boxes beside it with it; Display
+  options' values line up. Message boxes follow; the HUD's text keeps its own
+  size setting. The game is also DPI-aware, so Windows' display scaling no
+  longer stretches it. (M-P3-23)
 - **Black side bars beside the menus** on wide screens, instead of the
   menus' green: the main menu and the other menu pages, the splash, pause,
   failure and loading screens. (M-P3-22)

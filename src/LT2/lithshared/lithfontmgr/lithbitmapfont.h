@@ -82,6 +82,25 @@ class LithBitmapFont : public LithFont
 		int					m_nExtraLetterSpace;
 		uint32				m_nWaitLines;
 
+#ifdef NOLFSRC_MODERN
+	public:
+		// M-P3-23: drawn this many times the image's size. The widths, the
+		// average width and the height the text is measured with are the
+		// image's, scaled, so every caller lays text out in screen pixels.
+		void	SetScale(LTFLOAT fScale);
+		LTFLOAT	GetScale()		{return m_fScale;}
+
+	protected:
+		LTFLOAT				m_fScale;
+		uint32				m_nBaseWidths[LTF_NUM_TOTAL_CHARS];
+		uint32				m_nBaseAvgWidth;
+
+		int		ScaledLen(int n)	{return (int)((LTFLOAT)n * m_fScale + 0.5f);}
+		// a glyph whose scaled size is not empty (an empty one draws nothing,
+		// and the engine would warp it rather than blit it)
+		LTBOOL	GlyphFits()	{return ScaledLen(m_rRect.right - m_rRect.left) > 0 && ScaledLen(m_rRect.bottom - m_rRect.top) > 0;}
+#endif
+
 	private:
 		// Functions to handle the offset data of the font
 		LTBOOL	LoadOffsets();
