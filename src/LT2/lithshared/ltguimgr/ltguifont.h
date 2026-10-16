@@ -70,6 +70,11 @@ public:
 	// (engine fonts are left as they are)
 	void	SetScale(LTFLOAT fScale);
 	LTFLOAT	GetScale();
+	// M-P3-24: (re)made from a glyph sheet the game drew itself (cshell/
+	// p3_ttf.cpp); the sheet becomes the font's
+	LTBOOL	InitFromGlyphs(ILTClient *pClientDE, HSURFACE hSheet, char *szRefName,
+				   uint32 nCellHeight, const uint32 *pX, const uint32 *pY,
+				   const uint32 *pWidths, uint32 nSpaceWidth);
 #endif
 
 	// Sets the wrapping method between using spaces and non-space based wrapping (Japanese)

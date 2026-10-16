@@ -42,6 +42,13 @@ Since the first public release:
   file the installer writes; `linux-install.sh` and `windows-install.bat`
   check the directory against it first, and stop if a file is missing,
   changed or not part of the release.
+- **Menu text in a TrueType font.** In English the menus' text is drawn
+  from Bowlby One SC (SIL Open Font License, shipped in `fonts\`), made at
+  the size the screen needs, so it is crisp instead of a scaled-up bitmap:
+  menu items, titles, help text and the loading screen. `MenuFont 0`
+  brings the bitmap fonts back. (M-P3-24)
+- **The developer console in Noto Sans Mono**, a monospaced font sized for
+  the screen, instead of the menus' small font. (M-P3-25)
 - **Menu text grows with the screen.** The menus' text was the same size at
   every resolution, so on a large screen it was small inside a full-screen
   menu (and half that again at 4K); it is now drawn at the menu page's scale,
