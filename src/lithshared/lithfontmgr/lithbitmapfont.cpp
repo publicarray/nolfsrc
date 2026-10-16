@@ -52,6 +52,10 @@ LithBitmapFont::LithBitmapFont()
 	m_nY = 0;
 	m_nExtraLetterSpace = 0;
 	m_nWaitLines = 1;
+#ifdef NOLFSRC_MODERN
+	m_fScale = 1.0f;
+	m_nBaseAvgWidth = 0;
+#endif
 }
 
 //*********************************************************************************
@@ -102,6 +106,13 @@ LTBOOL LithBitmapFont::Init(ILTClient *pClient, LITHFONTCREATESTRUCT *lfCS)
 				}
 
 				CalcAvgWidth();
+
+#ifdef NOLFSRC_MODERN
+				// M-P3-23: the image's measures, which SetScale scales
+				memcpy(m_nBaseWidths, m_lfOD.pWidths, sizeof(m_nBaseWidths));
+				m_nBaseAvgWidth = m_nAvgWidth;
+				SetScale(m_fScale);
+#endif
 
 				return LTTRUE;
 			}
@@ -1016,10 +1027,31 @@ void LithBitmapFont::_Draw(int nX, int nY, uint32 nIndex1, uint32 nIndex2)
 
 			if (m_bChromaKey)
 			{
+#ifdef NOLFSRC_MODERN
+				// M-P3-23: the glyph at the font's scale
+				if (m_fScale != 1.0f)
+				{
+					LTRect rcDest(nX, nY, nX + ScaledLen(m_rRect.right - m_rRect.left),
+								  nY + ScaledLen(m_rRect.bottom - m_rRect.top));
+					if (GlyphFits())
+						m_pClient->ScaleSurfaceToSurfaceTransparent(m_pDest, m_pFont, &rcDest, &m_rRect, m_hTransColor);
+				}
+				else
+#endif
 				m_pClient->DrawSurfaceToSurfaceTransparent(m_pDest, m_pFont, &m_rRect, nX, nY, m_hTransColor);
 			}
 			else
 			{
+#ifdef NOLFSRC_MODERN
+				if (m_fScale != 1.0f)
+				{
+					LTRect rcDest(nX, nY, nX + ScaledLen(m_rRect.right - m_rRect.left),
+								  nY + ScaledLen(m_rRect.bottom - m_rRect.top));
+					if (GlyphFits())
+						m_pClient->ScaleSurfaceToSurface(m_pDest, m_pFont, &rcDest, &m_rRect);
+				}
+				else
+#endif
 				m_pClient->DrawSurfaceToSurface(m_pDest, m_pFont, &m_rRect, nX, nY);
 			}
 
@@ -1068,6 +1100,17 @@ void LithBitmapFont::_DrawSolid(int nX, int nY, uint32 nIndex1, uint32 nIndex2)
 			m_rRect.left = m_lfOD.pOffsets[nChar];
 			m_rRect.right = m_lfOD.pOffsets[nChar+1];
 
+#ifdef NOLFSRC_MODERN
+			if (m_fScale != 1.0f)
+			{
+				LTRect rcDest(nX, nY, nX + ScaledLen(m_rRect.right - m_rRect.left),
+							  nY + ScaledLen(m_rRect.bottom - m_rRect.top));
+				if (GlyphFits())
+					m_pClient->ScaleSurfaceToSurfaceSolidColor(m_pDest, m_pFont, &rcDest, &m_rRect,
+														   m_hTransColor, m_lfDD->hColor);
+			}
+			else
+#endif
 			m_pClient->DrawSurfaceSolidColor(m_pDest, m_pFont, &m_rRect, nX, nY,
 											 m_hTransColor, m_lfDD->hColor);
 
@@ -1095,6 +1138,20 @@ LTBOOL LithBitmapFont::ClipFont(LTRect &rcFont)
 			if (rcFont.top > m_lfDD->rcClip.bottom || rcFont.bottom < m_lfDD->rcClip.top)
 				return LTFALSE;
 
+#ifdef NOLFSRC_MODERN
+			// M-P3-23: the clip is in screen pixels, the source rows the
+			// image's
+			if (rcFont.top < m_lfDD->rcClip.top)
+			{
+				m_rRect.top = (int)((LTFLOAT)(m_lfDD->rcClip.top - rcFont.top) / m_fScale + 0.5f);
+				rcFont.top = m_lfDD->rcClip.top;
+			}
+
+			if (rcFont.bottom > m_lfDD->rcClip.bottom)
+			{
+				m_rRect.bottom += (int)((LTFLOAT)(m_lfDD->rcClip.bottom - rcFont.bottom) / m_fScale - 0.5f);
+			}
+#else
 			if (rcFont.top < m_lfDD->rcClip.top)
 			{
 				m_rRect.top = m_lfDD->rcClip.top - rcFont.top;
@@ -1105,6 +1162,7 @@ LTBOOL LithBitmapFont::ClipFont(LTRect &rcFont)
 			{
 				m_rRect.bottom += m_lfDD->rcClip.bottom - rcFont.bottom;
 			}
+#endif
 		}
 	}
 	else
@@ -1129,3 +1187,24 @@ LTBOOL LithBitmapFont::ClipFont(LTRect &rcFont)
 
 	return LTTRUE;
 }
+
+#ifdef NOLFSRC_MODERN
+//*********************************************************************************
+
+// M-P3-23: the measures the text is laid out with, at the new scale. The
+// image's own are kept from Init (they are what FontData.fnt caches).
+void LithBitmapFont::SetScale(LTFLOAT fScale)
+{
+	if (fScale < 0.25f)
+		fScale = 0.25f;
+	m_fScale = fScale;
+
+	if (!m_pFont || !m_nSurfHeight)
+		return;
+
+	for (int i = 0; i < LTF_NUM_TOTAL_CHARS; i++)
+		m_lfOD.pWidths[i] = m_nBaseWidths[i] ? (uint32)ScaledLen((int)m_nBaseWidths[i]) : 0;
+	m_nAvgWidth = (uint32)ScaledLen((int)m_nBaseAvgWidth);
+	m_nHeight = ScaledLen((int)m_nSurfHeight);
+}
+#endif
