@@ -1092,12 +1092,20 @@ LTBOOL CBaseFolder::OnLButtonDblClick(int x, int y)
 
 #ifdef NOLFSRC_MODERN
 	// M-P3-01: the screen point in the control's own frame
+	int nScreenX = x, nScreenY = y;
 	P3_PointToCtrl(pCtrl, x, y);
-#endif
+	if (pCtrl && pCtrl->OnLButtonDblClick(x, y))
+		return LTTRUE;
+	// M-P3-23: Windows sends a quick second click as a double-click in place
+	// of its button-down; a control with no use for it takes the button-down,
+	// so the second click is not lost
+	return OnLButtonDown(nScreenX, nScreenY);
+#else
 	if (pCtrl)
 		return pCtrl->OnLButtonDblClick(x, y);
 	else
         return LTFALSE;
+#endif
 }
 
 /******************************************************************/
