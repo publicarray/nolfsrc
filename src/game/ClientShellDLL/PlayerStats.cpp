@@ -12,7 +12,9 @@
 
 #include "stdafx.h"
 #include "PlayerStats.h"
+#ifdef NOLFSRC_MODERN
 #include "UIArtScale.h"
+#endif
 #include "WeaponMgr.h"
 #include <stdio.h>
 #include "GameClientShell.h"
@@ -4059,8 +4061,10 @@ void CPlayerStats::UpdateWeaponBindings()
 				{
 					uint32 h;
 					g_pLTClient->GetSurfaceDims(m_hWeaponSurf[i],&m_nIconSize,&h);
+#ifdef NOLFSRC_MODERN
 					// HD UI packs: lay out at the retail icon size
 					m_nIconSize /= UIArtFactor(m_hWeaponSurf[i], bLarge ? 48 : 24);
+#endif
 				}
 				g_pLTClient->OptimizeSurface(m_hWeaponSurf[i],SETRGB(255,0,255));
 				g_pLTClient->SetSurfaceAlpha(m_hWeaponSurf[i],m_fWeaponAlpha);

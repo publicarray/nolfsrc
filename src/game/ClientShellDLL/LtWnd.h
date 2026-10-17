@@ -86,7 +86,7 @@ public:
 	CLTWnd();
 	virtual ~CLTWnd() { Term(); }
 
-	typedef BOOL (*tSendMessageFunc)(CLTWnd* pSender, int nMsg, int nParam1 = 0,int nParam2 = 0);
+	typedef BOOL (*tSendMessageFunc)(CLTWnd* pSender, int nMsg, int nParam1/* = 0*/,int nParam2/* = 0*/);
 
 	// Initialization and termination
 	virtual BOOL			Init(LTWNDCREATESTRUCT *pcs);
@@ -164,7 +164,7 @@ public:
 	void					GetClipRect(CRect* pRect);
 	virtual void			GetSurfaceRect(CRect *pRect);
 
-	virtual BOOL			SendMessage(CLTWnd* pSender, int nMsg, int nParam1 = 0,int nParam2 = 0);
+	virtual BOOL			SendMessage(CLTWnd* pSender, int nMsg, int nParam1/* = 0*/,int nParam2/* = 0*/);
 	void					SetSendMessageFunc(tSendMessageFunc pFunc) { m_pSendMessageFunc = pFunc; }
 
 	// These will get passed down to the appropriate window
@@ -232,7 +232,7 @@ protected:
 	CString					m_sShowSound;			// Sound to play when the window is shown
 	CString					m_sHideSound;			// Sound to play when the window hides
 
-	BOOL					(*m_pSendMessageFunc)(CLTWnd* pSender, int nMsg, int nParam1 = 0,int nParam2 = 0);
+	BOOL					(*m_pSendMessageFunc)(CLTWnd* pSender, int nMsg, int nParam1/* = 0*/,int nParam2/* = 0*/);
 
 	/*struct
 	{

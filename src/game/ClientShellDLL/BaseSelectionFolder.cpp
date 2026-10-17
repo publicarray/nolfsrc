@@ -4,7 +4,9 @@
 
 #include "stdafx.h"
 #include "BaseSelectionFolder.h"
+#ifdef NOLFSRC_MODERN
 #include "UIArtScale.h"
+#endif
 #include "ClientRes.h"
 #include "InterfaceMgr.h"
 #include "FolderCommands.h"

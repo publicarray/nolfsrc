@@ -92,8 +92,13 @@ LTBOOL CIntelItemMgr::Init(const char* szAttributeFile)
 	//hack to create a intel.sav
 	if (!CWinUtil::FileExist(s_aAttributeFile))
 	{
+#if _MSC_VER >= 1300	// modern MSVC (contrib/msvc): <fstream>, in std
+		std::fstream f;
+		f.open(s_aAttributeFile, std::ios::out);
+#else					// VC6: the old <fstream.h>, no namespace
 		fstream f;
 		f.open(s_aAttributeFile, ios::out);
+#endif
 		f.write(" ",5);
 		f.close();
 	}
