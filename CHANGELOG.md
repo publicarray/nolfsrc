@@ -21,6 +21,15 @@ Since the first public release:
 - **The briefing room's Union Jack the right way round.** Every UNITY HQ
   level maps the flag mirrored, so it showed inverted; the modern build
   installs the texture mirrored, which turns it back. (M-P4-13, issue #26)
+- **Antialiasing on Intel Arc**: menu and HUD text no longer comes out as
+  hollow outlines with `d3d9.ren` or `opengl.ren` and Antialiasing on.
+- **Models are drawn as `d3d.ren` draws them** with `d3d9.ren` and
+  `opengl.ren`: back faces culled, and chrome (bottles, glasses) no longer
+  see-through.
+- **The hardware cursor shows when a menu opens** during play, without an
+  alt-tab.
+- **Windows display scaling**: the game is DPI aware, so above 100% scaling
+  it is no longer blurred or cropped.
 - **The dedicated server, `NolfServ.exe`**, is built from source and in the
   game directory of every build; `linux-server.sh` runs it with Wine,
   without a display if need be ([`docs/INSTALL.md`](docs/INSTALL.md), "A
