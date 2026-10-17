@@ -9,6 +9,7 @@
 #include "FolderMgr.h"
 #include "FXStructs.h"
 #include "cshell/p3_ui.h"
+#include "UIArtScale.h"
 
 VarTrack g_vtP3UIScale;
 VarTrack g_vtP3ShowFramerate;
@@ -108,6 +109,26 @@ LTBOOL P3_PointOnCtrl(CLTGUICtrl *pCtrl, int x, int y, LTBOOL bRow)
 
 	return (x >= nLeft && x <= nLeft + nWidth &&
 			y >= nTop && y <= nTop + nHeight);
+}
+
+float P3_MenuArtScale(HSURFACE hSurf, uint32 nRetailWidth)
+{
+	return P3_MenuScale() / (float)UIArtFactor(hSurf, nRetailWidth);
+}
+
+LTBOOL P3_PointOnScaledSurf(HSURFACE hSurf, LTIntPt pos, uint32 nRetailWidth, int x, int y)
+{
+	if (!hSurf) return LTFALSE;
+	x += g_pInterfaceResMgr->GetXOffset();
+	y += g_pInterfaceResMgr->GetYOffset();
+	uint32 nWidth = 0, nHeight = 0;
+	g_pLTClient->GetSurfaceDims(hSurf, &nWidth, &nHeight);
+	// as P3_DrawScaled draws it
+	float fScale = P3_MenuArtScale(hSurf, nRetailWidth);
+	int nLeft = P3_MenuX(pos.x);
+	int nTop = P3_MenuY(pos.y);
+	return (x >= nLeft && x <= nLeft + (int)((float)nWidth * fScale) &&
+			y >= nTop && y <= nTop + (int)((float)nHeight * fScale));
 }
 
 int P3_CtrlToScreenX(CLTGUICtrl *pCtrl, int x)
