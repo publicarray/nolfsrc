@@ -12,6 +12,7 @@
 
 #include "stdafx.h"
 #include "LoadingScreen.h"
+#include "UIArtScale.h"
 #include "InterfaceMgr.h"
 #include "GameClientShell.h"
 #include "WinUtil.h"
@@ -464,7 +465,7 @@ LTBOOL CLoadingScreen::Update()
 #ifdef NOLFSRC_MODERN
 	// M-P3-05: the mission photo scaled with the page
 	if (m_hWorldPhoto)
-		P3_DrawScaledSolid(hDestSurf,m_hWorldPhoto,m_PhotoPos.x,m_PhotoPos.y,P3_MenuScale());
+		P3_DrawScaledSolid(hDestSurf,m_hWorldPhoto,m_PhotoPos.x,m_PhotoPos.y,P3_MenuScale() / (float)UIArtFactor(m_hWorldPhoto, 180));	// HD UI packs: at the retail size
 #else
 	if (m_hWorldPhoto)
 		g_pLTClient->DrawSurfaceToSurface(hDestSurf,m_hWorldPhoto,LTNULL,m_PhotoPos.x,m_PhotoPos.y);

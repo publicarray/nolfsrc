@@ -12,6 +12,7 @@
 
 #include "stdafx.h"
 #include "PlayerStats.h"
+#include "UIArtScale.h"
 #include "WeaponMgr.h"
 #include <stdio.h>
 #include "GameClientShell.h"
@@ -4058,6 +4059,8 @@ void CPlayerStats::UpdateWeaponBindings()
 				{
 					uint32 h;
 					g_pLTClient->GetSurfaceDims(m_hWeaponSurf[i],&m_nIconSize,&h);
+					// HD UI packs: lay out at the retail icon size
+					m_nIconSize /= UIArtFactor(m_hWeaponSurf[i], bLarge ? 48 : 24);
 				}
 				g_pLTClient->OptimizeSurface(m_hWeaponSurf[i],SETRGB(255,0,255));
 				g_pLTClient->SetSurfaceAlpha(m_hWeaponSurf[i],m_fWeaponAlpha);
@@ -4333,7 +4336,11 @@ void CPlayerStats::P3DrawBoundWeapons(HSURFACE hScreen, float fScale)
 			if (m_fIconOffset[i] > (LTFLOAT)nIconSize)
 				m_fIconOffset[i] = (LTFLOAT)nIconSize;
 			int x = w-(int)m_fIconOffset[i];
-			P3_DrawScaledSolid(hScreen, m_hWeaponSurf[i], x, y, fScale);
+			// HD UI packs: an upscaled icon at the retail icon size
+			uint32 nSurfW = 0, nSurfH = 0;
+			g_pLTClient->GetSurfaceDims(m_hWeaponSurf[i], &nSurfW, &nSurfH);
+			float fIconScale = (nSurfW && m_nIconSize) ? fScale * (float)m_nIconSize / (float)nSurfW : fScale;
+			P3_DrawScaledSolid(hScreen, m_hWeaponSurf[i], x, y, fIconScale);
 			if (GetConsoleInt("BindingNumbers",1) > 0)
 			{
 				g_pLTClient->SetOptimized2DBlend(LTSURFACEBLEND_MASK);
