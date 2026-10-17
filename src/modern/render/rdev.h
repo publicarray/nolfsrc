@@ -63,6 +63,9 @@ enum RDCap {
 };
 void rd_Enable(RDCap eCap);
 void rd_Disable(RDCap eCap);
+// Back faces culled (screen-clockwise is the front, as d3d.ren's model
+// renderer tests it) or not; off by default.
+void rd_CullBack(bool bOn);
 
 enum RDBlend {
     RD_ZERO, RD_ONE, RD_SRC_COLOR, RD_ONE_MINUS_SRC_COLOR, RD_DST_COLOR, RD_ONE_MINUS_DST_COLOR,
