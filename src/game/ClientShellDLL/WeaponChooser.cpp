@@ -9,7 +9,9 @@
 #include "WinUtil.h"
 #include "SoundMgr.h"
 #include "LayoutMgr.h"
+#ifdef NOLFSRC_MODERN
 #include "UIArtScale.h"
+#endif
 #ifdef NOLFSRC_MODERN
 // M-P5-12: quick switch
 #include "cshell/p5_gameplay.h"
@@ -241,10 +243,12 @@ void CWeaponChooser::Draw()
     uint32 nScreenHeight, nScreenWidth;
     g_pLTClient->GetSurfaceDims (hScreen, &nScreenWidth, &nScreenHeight);
 	float yRatio = (float)nScreenHeight / 480.0f;
+#ifdef NOLFSRC_MODERN
 	// HD UI packs: the icons at UIArtScale times the retail 48px
 	float fArt = UIArtUserScale(yRatio);
 	const int kIconWidth = (int)(48 * fArt);
 	const int kIconSpacing = (int)(16 * fArt);
+#endif
 
 	int x = (int)nScreenWidth / 2;
 	int y = (int) (yRatio * kfIconY);
@@ -273,7 +277,11 @@ void CWeaponChooser::Draw()
 
         LTRect rect(x-3,y-3,x+kIconWidth+3,y+kIconWidth+3);
         g_pLTClient->FillRect(hScreen,&rect,SETRGB_T(vColor.x,vColor.y,vColor.z));
+#ifdef NOLFSRC_MODERN
         UIArtDraw(hScreen, m_hWeaponSurf[1], x, y, 48, fArt, LTFALSE, LTNULL);
+#else
+        g_pLTClient->DrawSurfaceToSurface(hScreen, m_hWeaponSurf[1], LTNULL, x, y);
+#endif
 	}
 
 /* commented out drawing of weapon command - jrg 9/22
@@ -452,10 +460,12 @@ void CAmmoChooser::Draw()
     uint32 nScreenHeight, nScreenWidth;
     g_pLTClient->GetSurfaceDims (hScreen, &nScreenWidth, &nScreenHeight);
 	float yRatio = (float)nScreenHeight / 480.0f;
+#ifdef NOLFSRC_MODERN
 	// HD UI packs: the icons at UIArtScale times the retail 48px
 	float fArt = UIArtUserScale(yRatio);
 	const int kIconWidth = (int)(48 * fArt);
 	const int kIconSpacing = (int)(16 * fArt);
+#endif
 
 	int x = (int)nScreenWidth / 2;
 	int y = (int) (yRatio * kfIconY);
@@ -479,7 +489,11 @@ void CAmmoChooser::Draw()
 	{
         LTRect rect(x-3,y-3,x+kIconWidth+3,y+kIconWidth+3);
         g_pLTClient->FillRect(hScreen,&rect,SETRGB_T(220,192,255));
+#ifdef NOLFSRC_MODERN
         UIArtDraw(hScreen, m_hAmmoSurf[kCurrAmmo], x, y, 48, fArt, LTFALSE, LTNULL);
+#else
+        g_pLTClient->DrawSurfaceToSurface(hScreen, m_hAmmoSurf[kCurrAmmo], LTNULL, x, y);
+#endif
 		int count = pStats->GetAmmoCount(m_nAmmo[kCurrAmmo]);
 		if (count > 0 && count < 1000)
 		{

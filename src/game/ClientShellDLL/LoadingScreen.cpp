@@ -12,7 +12,9 @@
 
 #include "stdafx.h"
 #include "LoadingScreen.h"
+#ifdef NOLFSRC_MODERN
 #include "UIArtScale.h"
+#endif
 #include "InterfaceMgr.h"
 #include "GameClientShell.h"
 #include "WinUtil.h"
