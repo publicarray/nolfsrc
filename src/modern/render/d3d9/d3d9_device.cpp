@@ -375,6 +375,12 @@ void rd_Enable(RDCap eCap)
         s_S.m_Caps[eCap] = true;
 }
 
+void rd_CullBack(bool bOn)
+{
+    if (s_pDev)
+        d9_RS(D3DRS_CULLMODE, bOn ? D3DCULL_CCW : D3DCULL_NONE);
+}
+
 void rd_Disable(RDCap eCap)
 {
     if (eCap == RD_TEXTURE_2D)

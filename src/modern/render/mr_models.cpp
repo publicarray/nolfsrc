@@ -794,6 +794,9 @@ static void mr_DrawModelWith(LTObject* pInst, bool bReallyClose)
         rd_LoadIdentity();
     }
     mr_ForgetBindings();
+    // d3d.ren culls a model's back faces in software (TriFacing): without
+    // it the inside of a modelled-thick glass bottle drew over its label.
+    rd_CullBack(true);
     for (uint32_t i = 0; i < model.nPieces(); i++)
     {
         if (i < 32 && (nHidden & (1u << i)))
@@ -839,6 +842,12 @@ static void mr_DrawModelWith(LTObject* pInst, bool bReallyClose)
         }
         if (pEnv)
         {
+            // The chrome pass is opaque: the skin pass of the piece before
+            // left blending on, which drew every later piece's chrome by
+            // the environment map's alpha and showed the scene through
+            // (wine bottles, glasses).
+            if (nAlpha == 255)
+                rd_Disable(RD_BLEND);
             mr_SetBaseTexture(pEnv);
             rd_Begin(RD_TRIANGLES);
             for (uint32_t t = 0; t < pLOD->m_nTris; t++)
@@ -878,6 +887,7 @@ static void mr_DrawModelWith(LTObject* pInst, bool bReallyClose)
         }
         rd_End();
     }
+    rd_CullBack(false);
     if (bReallyClose)
         rd_PopMatrix();
     if (pEnv)
