@@ -4314,9 +4314,13 @@ void CPlayerStats::P3DrawBoundWeapons(HSURFACE hScreen, float fScale)
 {
 	if (m_fWeaponAlpha < 0.1f) return;
 
-	int nIconSize = (int)((float)m_nIconSize * fScale);
 	int w = (int)g_pInterfaceResMgr->GetScreenWidth();
-	int y = (int)g_pInterfaceResMgr->GetScreenHeight()/2 - 5*nIconSize;
+	int h = (int)g_pInterfaceResMgr->GetScreenHeight();
+	// UIArtScale, as the choosers: capped so the ten icons fit the screen
+	if (m_nIconSize)
+		fScale *= UIArtUserScale((float)h / (10.0f * (float)m_nIconSize * fScale));
+	int nIconSize = (int)((float)m_nIconSize * fScale);
+	int y = h/2 - 5*nIconSize;
 
 	HLTCOLOR hTextColor = kWhite;
 	if (m_fWeaponAlpha < 1.0f)
