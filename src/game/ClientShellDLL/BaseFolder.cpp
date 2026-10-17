@@ -370,13 +370,16 @@ LTBOOL CBaseFolder::Render(HSURFACE hDestSurf)
 #ifdef NOLFSRC_MODERN
 	// M-P3-04: the highlighted back/continue arrows, scaled with the page
 	// like the 3D arrows they are drawn over
+	// (an HD replacement at the retail size: P3_MenuArtScale)
 	if (m_pBack && m_pBack->IsSelected())
 	{
-		P3_DrawScaled(hDestSurf, g_pInterfaceResMgr->GetSharedSurface(m_sArrowBack), P3_MenuX(m_ArrowBackPos.x), P3_MenuY(m_ArrowBackPos.y), P3_MenuScale(), m_hTransparentColor);
+		HSURFACE hArrow = g_pInterfaceResMgr->GetSharedSurface(m_sArrowBack);
+		P3_DrawScaled(hDestSurf, hArrow, P3_MenuX(m_ArrowBackPos.x), P3_MenuY(m_ArrowBackPos.y), P3_MenuArtScale(hArrow, kP3ArrowWidth), m_hTransparentColor);
 	}
 	if (m_pContinue && m_pContinue->IsSelected())
 	{
-		P3_DrawScaled(hDestSurf, g_pInterfaceResMgr->GetSharedSurface(m_sArrowNext), P3_MenuX(m_ArrowNextPos.x), P3_MenuY(m_ArrowNextPos.y), P3_MenuScale(), m_hTransparentColor);
+		HSURFACE hArrow = g_pInterfaceResMgr->GetSharedSurface(m_sArrowNext);
+		P3_DrawScaled(hDestSurf, hArrow, P3_MenuX(m_ArrowNextPos.x), P3_MenuY(m_ArrowNextPos.y), P3_MenuArtScale(hArrow, kP3ArrowWidth), m_hTransparentColor);
 	}
 #else
 	if (m_pBack && m_pBack->IsSelected())
@@ -1345,6 +1348,17 @@ LTBOOL CBaseFolder::GetControlUnderPoint(int xPos, int yPos, int *pnIndex)
 #ifdef NOLFSRC_MODERN
 		// M-P3-01: the point is on the screen, the control where it is drawn
 		if (P3_PointOnCtrl(m_fixedControlArray[i], xPos, yPos))
+		{
+			*pnIndex=-1-i;
+            return LTTRUE;
+		}
+		// M-P3-04: the back/continue arrows, scaled with the page, are part
+		// of their buttons (at 640x480 the arrow and the text were about the
+		// same size; scaled up, only the text took a click)
+		if ((m_fixedControlArray[i] == m_pBack &&
+			 P3_PointOnScaledSurf(g_pInterfaceResMgr->GetSharedSurface(m_sArrowBack), m_ArrowBackPos, kP3ArrowWidth, xPos, yPos)) ||
+			(m_fixedControlArray[i] == m_pContinue &&
+			 P3_PointOnScaledSurf(g_pInterfaceResMgr->GetSharedSurface(m_sArrowNext), m_ArrowNextPos, kP3ArrowWidth, xPos, yPos)))
 		{
 			*pnIndex=-1-i;
             return LTTRUE;
