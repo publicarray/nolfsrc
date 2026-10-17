@@ -25,7 +25,10 @@ M-P4-12).
   to its DLL in the game directory, so every `CoCreateInstance` of one --
   the engine's own, and the ones the DirectMusic DLLs make of each other --
   finds Microsoft's code without the registry. `lithtech.exe` has no
-  manifest of its own, so Windows and Wine both read this one.
+  manifest of its own, so Windows and Wine both read this one. It also
+  declares the game DPI aware, so that with Windows display scaling above
+  100% the game is drawn at the screen's real size rather than scaled up
+  (blurred, and a full-screen window cropped).
 * **The names.** A DLL called `dmime.dll` is loaded as Wine's builtin even
   from the game directory, unless the prefix overrides it. Wine has no
   builtin `ms_dmime.dll`, so it loads the file. None of the nine imports

@@ -75,4 +75,13 @@
   <file name="ms_dswave.dll">
     <comClass clsid="{8A667154-F9CB-11D2-AD8A-0060B0575ABC}" threadingModel="Both" description="Microsoft DirectSound Wave"/>
   </file>
+  <!-- DPI aware: with Windows display scaling above 100% the game is
+       otherwise drawn at the scaled-down size and stretched, which blurs it
+       and crops a full-screen window. -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor</dpiAwareness>
+    </windowsSettings>
+  </application>
 </assembly>
