@@ -9,6 +9,7 @@
 #include "WinUtil.h"
 #include "SoundMgr.h"
 #include "LayoutMgr.h"
+#include "UIArtScale.h"
 #ifdef NOLFSRC_MODERN
 // M-P5-12: quick switch
 #include "cshell/p5_gameplay.h"
@@ -240,6 +241,10 @@ void CWeaponChooser::Draw()
     uint32 nScreenHeight, nScreenWidth;
     g_pLTClient->GetSurfaceDims (hScreen, &nScreenWidth, &nScreenHeight);
 	float yRatio = (float)nScreenHeight / 480.0f;
+	// HD UI packs: the icons at UIArtScale times the retail 48px
+	float fArt = UIArtUserScale(yRatio);
+	const int kIconWidth = (int)(48 * fArt);
+	const int kIconSpacing = (int)(16 * fArt);
 
 	int x = (int)nScreenWidth / 2;
 	int y = (int) (yRatio * kfIconY);
@@ -254,7 +259,7 @@ void CWeaponChooser::Draw()
 #ifdef NOLFSRC_MODERN
 	// M-P3-18: the previous weapon beside the current one
 	if (m_hWeaponSurf[0] && m_nWeapons[0] != m_nWeapons[kLastWeapon])
-        g_pLTClient->DrawSurfaceToSurfaceTransparent(hScreen, m_hWeaponSurf[0], LTNULL, x, y,SETRGB_T(255,0,255));
+        UIArtDraw(hScreen, m_hWeaponSurf[0], x, y, 48, fArt, LTTRUE, SETRGB_T(255,0,255));
 #else
 /*
 	if (m_hWeaponSurf[0] && m_nWeapons[0] != m_nWeapons[kLastWeapon])
@@ -268,7 +273,7 @@ void CWeaponChooser::Draw()
 
         LTRect rect(x-3,y-3,x+kIconWidth+3,y+kIconWidth+3);
         g_pLTClient->FillRect(hScreen,&rect,SETRGB_T(vColor.x,vColor.y,vColor.z));
-        g_pLTClient->DrawSurfaceToSurface(hScreen, m_hWeaponSurf[1], LTNULL, x, y);
+        UIArtDraw(hScreen, m_hWeaponSurf[1], x, y, 48, fArt, LTFALSE, LTNULL);
 	}
 
 /* commented out drawing of weapon command - jrg 9/22
@@ -282,7 +287,7 @@ void CWeaponChooser::Draw()
 #ifdef NOLFSRC_MODERN
 	// M-P3-18: the next weapon beside the current one
 	if (m_hWeaponSurf[2] && m_nWeapons[2] != m_nWeapons[1])
-        g_pLTClient->DrawSurfaceToSurfaceTransparent(hScreen, m_hWeaponSurf[2], LTNULL, x, y,SETRGB_T(255,0,255));
+        UIArtDraw(hScreen, m_hWeaponSurf[2], x, y, 48, fArt, LTTRUE, SETRGB_T(255,0,255));
 #else
 /*
 	if (m_hWeaponSurf[2] && m_nWeapons[2] != m_nWeapons[1])
@@ -447,6 +452,10 @@ void CAmmoChooser::Draw()
     uint32 nScreenHeight, nScreenWidth;
     g_pLTClient->GetSurfaceDims (hScreen, &nScreenWidth, &nScreenHeight);
 	float yRatio = (float)nScreenHeight / 480.0f;
+	// HD UI packs: the icons at UIArtScale times the retail 48px
+	float fArt = UIArtUserScale(yRatio);
+	const int kIconWidth = (int)(48 * fArt);
+	const int kIconSpacing = (int)(16 * fArt);
 
 	int x = (int)nScreenWidth / 2;
 	int y = (int) (yRatio * kfIconY);
@@ -470,7 +479,7 @@ void CAmmoChooser::Draw()
 	{
         LTRect rect(x-3,y-3,x+kIconWidth+3,y+kIconWidth+3);
         g_pLTClient->FillRect(hScreen,&rect,SETRGB_T(220,192,255));
-        g_pLTClient->DrawSurfaceToSurface(hScreen, m_hAmmoSurf[kCurrAmmo], LTNULL, x, y);
+        UIArtDraw(hScreen, m_hAmmoSurf[kCurrAmmo], x, y, 48, fArt, LTFALSE, LTNULL);
 		int count = pStats->GetAmmoCount(m_nAmmo[kCurrAmmo]);
 		if (count > 0 && count < 1000)
 		{
@@ -484,7 +493,7 @@ void CAmmoChooser::Draw()
 	// M-P3-18: the next ammo beside the current one
 	if (bNextAmmo)
 	{
-        g_pLTClient->DrawSurfaceToSurfaceTransparent(hScreen, m_hAmmoSurf[kLastAmmo], LTNULL, x, y,SETRGB_T(255,0,255));
+        UIArtDraw(hScreen, m_hAmmoSurf[kLastAmmo], x, y, 48, fArt, LTTRUE, SETRGB_T(255,0,255));
 		int count = pStats->GetAmmoCount(m_nAmmo[kLastAmmo]);
 		if (count > 0 && count < 1000)
 		{
