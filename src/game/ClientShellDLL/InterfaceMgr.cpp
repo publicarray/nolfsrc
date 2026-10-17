@@ -4167,6 +4167,10 @@ void CInterfaceMgr::OnLButtonDblClick(int x, int y)
 {
 	if (m_MessageBox.IsVisible())
 	{
+#ifdef NOLFSRC_MODERN
+		// M-P3-23: a quick second click is the message box's button-down
+		m_MessageBox.OnLButtonDown(x,y);
+#endif
 		return;
 	}
 	switch (m_eGameState)
