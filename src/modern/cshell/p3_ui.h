@@ -48,6 +48,17 @@ void        P3_PointToCtrl(CLTGUICtrl *pCtrl, int &x, int &y);
 // Whether a mouse point (as the folders get it) is on a control drawn at its
 // layout position; a row of a folder's list (bRow) covers its scaled size.
 LTBOOL      P3_PointOnCtrl(CLTGUICtrl *pCtrl, int x, int y, LTBOOL bRow = LTFALSE);
+// The retail back/continue arrows' width (interface\BackArrow.pcx and
+// NextArrow.pcx, 61x51), which an HD replacement is a multiple of.
+const uint32 kP3ArrowWidth = 61;
+
+// The scale at which a surface nRetailWidth wide in the retail game is drawn
+// with the page: the menu scale, divided by the integer factor of an HD
+// replacement (UIArtFactor), so an HD surface keeps the retail size.
+float       P3_MenuArtScale(HSURFACE hSurf, uint32 nRetailWidth);
+// Whether a mouse point (as the folders get it) is on a surface drawn at a
+// layout position at P3_MenuArtScale (M-P3-04: the back/continue arrows).
+LTBOOL      P3_PointOnScaledSurf(HSURFACE hSurf, LTIntPt pos, uint32 nRetailWidth, int x, int y);
 // Back from a control's frame to the screen (for a control such as the list
 // control, whose parts are placed on the screen when it draws).
 int         P3_CtrlToScreenX(CLTGUICtrl *pCtrl, int x);
