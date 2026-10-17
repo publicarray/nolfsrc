@@ -4,6 +4,9 @@
 
 #include "stdafx.h"
 #include "BaseSelectionFolder.h"
+#ifdef NOLFSRC_MODERN
+#include "UIArtScale.h"
+#endif
 #include "ClientRes.h"
 #include "InterfaceMgr.h"
 #include "FolderCommands.h"
@@ -198,7 +201,7 @@ LTBOOL CBaseSelectionFolder::Render(HSURFACE hDestSurf)
 #ifdef NOLFSRC_MODERN
 	// M-P3-01: scaled with the page, at its place in the 4:3 area
 	if (m_hPhotoSurf)
-		P3_DrawScaledSolid(hDestSurf,m_hPhotoSurf,P3_MenuX(m_PhotoPos.x),P3_MenuY(m_PhotoPos.y),P3_MenuScale());
+		P3_DrawScaledSolid(hDestSurf,m_hPhotoSurf,P3_MenuX(m_PhotoPos.x),P3_MenuY(m_PhotoPos.y),P3_MenuScale() / (float)UIArtPhotoFactor(m_hPhotoSurf));	// HD UI packs: at the retail size
 #else
 	if (m_hPhotoSurf)
         g_pLTClient->DrawSurfaceToSurface(hDestSurf,m_hPhotoSurf,LTNULL,m_PhotoPos.x+xo,m_PhotoPos.y+yo);
