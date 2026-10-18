@@ -4334,6 +4334,13 @@ void CInterfaceMgr::UseCursor(LTBOOL bUseCursor)
 		if (m_bUseHardwareCursor)
 		{
 			g_pLTClient->Cursor()->SetCursorMode(CM_Hardware);
+#ifdef NOLFSRC_MODERN
+			// Playing confines the mouse with SetCursor(NULL) (p1_input.cpp),
+			// which left the menu's hardware cursor invisible until an
+			// alt-tab set it again: give it its shape back.
+			if (m_hCursor)
+				g_pLTClient->Cursor()->SetCursor(m_hCursor);
+#endif
 		}
 	}
 	else

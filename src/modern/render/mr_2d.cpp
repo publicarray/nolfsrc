@@ -22,6 +22,13 @@ struct MRSurface {
     bool     m_bDirty;              // pixels changed since the upload
     bool     m_bTexKeyed;           // the upload's keying
     uint32_t m_nTexKey;
+    // The MASK blend's texture (see mr_UploadMask): black, the colour's
+    // brightness in alpha.
+    uint32_t m_TexMask;
+    uint32_t m_nMaskGen;
+    bool     m_bMaskDirty;
+    bool     m_bMaskKeyed;
+    uint32_t m_nMaskKey;
 };
 
 static uint32_t mr_Pow2(uint32_t n)
@@ -114,7 +121,7 @@ void* mr_CreateSurface(uint32_t nWidth, uint32_t nHeight)
         free(s);
         return NULL;
     }
-    s->m_bDirty = true;
+    s->m_bDirty = s->m_bMaskDirty = true;
     return s;
 }
 
@@ -124,6 +131,9 @@ static void mr_FreeSurfaceTexture(MRSurface* s)
     if (s->m_Tex && s->m_nTexGen == g.nContextGen && g.bContext)
         rd_DeleteTexture(s->m_Tex);
     s->m_Tex = 0;
+    if (s->m_TexMask && s->m_nMaskGen == g.nContextGen && g.bContext)
+        rd_DeleteTexture(s->m_TexMask);
+    s->m_TexMask = 0;
 }
 
 void mr_DeleteSurface(void* pSurface)
@@ -151,7 +161,7 @@ void* mr_LockSurface(void* pSurface)
     MRSurface* s = (MRSurface*)pSurface;
     if (!s)
         return NULL;
-    s->m_bDirty = true;
+    s->m_bDirty = s->m_bMaskDirty = true;
     return s->m_pPixels;
 }
 
@@ -239,15 +249,70 @@ static bool mr_UploadSurface(MRSurface* s, bool bKeyed, uint32_t nKey)
     return true;
 }
 
+// The MASK blend (dest * (1 - src colour)) on a multisampled target: Intel
+// Arc's driver drops whole pixels of what it draws with a ZERO or
+// INV_SRC_COLOR-style factor there (fonts came out as outlines, in
+// Direct3D 9, OpenGL and dgVoodoo alike), while plain alpha blending draws
+// right. So the mask goes as black alpha-blended by the source's brightness,
+// from a second texture holding that brightness in alpha: the same result
+// for the grey fonts it is used for.
+static bool mr_UploadMask(MRSurface* s, bool bKeyed, uint32_t nKey)
+{
+    if (s->m_TexMask && s->m_nMaskGen != g.nContextGen)
+        s->m_TexMask = 0;
+    if (s->m_TexMask && !s->m_bMaskDirty && s->m_bMaskKeyed == bKeyed && (!bKeyed || s->m_nMaskKey == nKey))
+        return true;
+
+    uint32_t tw = s->m_nTexWidth, th = s->m_nTexHeight;   // mr_UploadSurface's
+    uint32_t* pRGBA = (uint32_t*)calloc(tw * th, 4);
+    if (!pRGBA)
+        return false;
+    nKey &= g.nBitDepth == 16 ? 0xffff : 0x00ffffff;
+    for (uint32_t y = 0; y < s->m_nHeight; y++)
+    {
+        const uint8_t* pRow = s->m_pPixels + y * s->m_nPitch;
+        uint32_t* pOut = pRGBA + y * tw;
+        for (uint32_t x = 0; x < s->m_nWidth; x++)
+        {
+            uint32_t px = g.nBitDepth == 16 ? ((const uint16_t*)pRow)[x] : ((const uint32_t*)pRow)[x] & 0x00ffffff;
+            if (bKeyed && px == nKey)
+                continue;
+            uint32_t argb = g.nBitDepth == 16 ? mr_PixelToARGB(px) : px;
+            uint32_t r = (argb >> 16) & 0xff, gg = (argb >> 8) & 0xff, b = argb & 0xff;
+            uint32_t a = r > gg ? (r > b ? r : b) : (gg > b ? gg : b);
+            pOut[x] = a << 24;
+        }
+    }
+    if (!s->m_TexMask)
+    {
+        s->m_TexMask = rd_GenTexture();
+        rd_BindTexture(s->m_TexMask);
+        rd_TexWrap(false, false);
+        rd_TexMaxLevel(0);
+        rd_TexImage(0, RD_FMT_RGBA8, tw, th, RD_PIX_BGRA, pRGBA);
+    }
+    else
+    {
+        rd_BindTexture(s->m_TexMask);
+        rd_TexSubImage(0, 0, 0, tw, th, RD_PIX_BGRA, pRGBA);
+    }
+    free(pRGBA);
+    s->m_nMaskGen = g.nContextGen;
+    s->m_bMaskDirty = false;
+    s->m_bMaskKeyed = bKeyed;
+    s->m_nMaskKey = nKey;
+    return true;
+}
+
 // Draw [src] of a surface's texture onto four screen corners (x,y pairs, in
 // the order top-left, top-right, bottom-right, bottom-left), under the
 // Optimized-2D colour and blend when that bracket is open.
 static void mr_DrawSurfaceQuad(MRSurface* s, const float* pSrc, const float* pCorners,
-                                float fAlpha, bool bFilter)
+                                float fAlpha, bool bFilter, bool bMask)
 {
     mr_Begin2D();
     rd_Enable(RD_TEXTURE_2D);
-    rd_BindTexture(s->m_Tex);
+    rd_BindTexture(bMask ? s->m_TexMask : s->m_Tex);
     RDFilter filter = bFilter ? RD_LINEAR : RD_NEAREST;
     rd_TexFilter(filter, filter);
     rd_TexEnv(RD_ENV_MODULATE);
@@ -266,7 +331,13 @@ static void mr_DrawSurfaceQuad(MRSurface* s, const float* pSrc, const float* pCo
         mr_ApplyBlend(LTSURFACEBLEND_ALPHA);
     if (fAlpha < 0.0f) fAlpha = 0.0f;
     if (fAlpha > 1.0f) fAlpha = 1.0f;
-    rd_Color4f(r, gg, b, fAlpha);
+    if (bMask)
+    {
+        rd_BlendFunc(RD_SRC_ALPHA, RD_ONE_MINUS_SRC_ALPHA);
+        rd_Color4f(0, 0, 0, r > gg ? (r > b ? r : b) : (gg > b ? gg : b));
+    }
+    else
+        rd_Color4f(r, gg, b, fAlpha);
 
     float u0 = pSrc[0] / s->m_nTexWidth, v0 = pSrc[1] / s->m_nTexHeight;
     float u1 = pSrc[2] / s->m_nTexWidth, v1 = pSrc[3] / s->m_nTexHeight;
@@ -302,8 +373,10 @@ void mr_BlitToScreen(RenderBlitRequest* pRequest)
     float fCorners[8] = { x0, y0, x1, y0, x1, y1, x0, y1 };
     bool bScaled = (dst->right - dst->left) != (src->right - src->left) ||
                    (dst->bottom - dst->top) != (src->bottom - src->top);
+    bool bMask = g.bInOptimized2D && g.eBlend == LTSURFACEBLEND_MASK && g_RDCaps.nSamples > 1 &&
+                 mr_UploadMask(s, (pRequest->m_bTransparent & 1) != 0, pRequest->m_TransColor);
     mr_DrawSurfaceQuad(s, fSrc, fCorners, pRequest->m_fAlpha,
-                        bScaled && cvi(CV_FilterOptimized));
+                        bScaled && cvi(CV_FilterOptimized), bMask);
 }
 
 // TransformSurfaceToSurface onto the screen: four warp points, the source
@@ -488,5 +561,5 @@ void mr_BlitFromScreen(RenderBlitRequest* pRequest)
         }
     }
     free(pRead);
-    s->m_bDirty = true;
+    s->m_bDirty = s->m_bMaskDirty = true;
 }
