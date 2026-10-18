@@ -325,7 +325,7 @@ static const GLenum s_Caps[RD_CAP_COUNT] = {
 };
 void rd_Enable(RDCap eCap)  { glEnable(s_Caps[eCap]); }
 void rd_Disable(RDCap eCap) { glDisable(s_Caps[eCap]); }
-void rd_CullBack(bool bOn) { if (bOn) { glCullFace(GL_BACK); glFrontFace(GL_CCW); glEnable(GL_CULL_FACE); } else glDisable(GL_CULL_FACE); }
+void rd_CullBack(bool bOn) { if (bOn) { glCullFace(GL_BACK); glFrontFace(GL_CW); glEnable(GL_CULL_FACE); } else glDisable(GL_CULL_FACE); }
 
 void rd_BlendFunc(RDBlend eSrc, RDBlend eDst)
 {
