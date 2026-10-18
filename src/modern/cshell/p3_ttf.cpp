@@ -102,8 +102,9 @@ CLTGUIFont *P3_TTF_ConsoleFont(int nScreenHeight)
 	return s_bMade ? s_pFont : NULL;
 }
 
-// The font remade from face nFace, its cells nHeight pixels high, and
-// condensed so P3_TTF_WIDTH_SAMPLE is at most nMaxWidth wide (0: no limit).
+// The font remade from face nFace, its cells nHeight pixels high, its glyphs
+// smaller if need be so P3_TTF_WIDTH_SAMPLE is at most nMaxWidth wide (0: no
+// limit).
 static bool P3_TTF_MakeFace(CLTGUIFont *pFont, int nFace, int nHeight, int nMaxWidth, const char *szRefName)
 {
 	if (nHeight < 6)
@@ -127,24 +128,25 @@ static bool P3_TTF_MakeFace(CLTGUIFont *pFont, int nFace, int nHeight, int nMaxW
 	TEXTMETRICA tm;
 	GetTextMetricsA(hDC, &tm);
 	// Wider than the retail font (Ad Lib's glyphs are, a little, than the
-	// retail images drawn from it): the same face with narrower glyphs.
+	// retail images drawn from it): the same face smaller, its proportions
+	// kept, at the top of a cell still nHeight high.
+	uint32 nCell = (uint32)tm.tmHeight;
 	SIZE szSample;
 	if (nMaxWidth > 0 && GetTextExtentPoint32A(hDC, P3_TTF_WIDTH_SAMPLE, sizeof(P3_TTF_WIDTH_SAMPLE) - 1, &szSample) &&
 		szSample.cx > nMaxWidth)
 	{
-		int nAveWidth = (int)((float)tm.tmAveCharWidth * (float)nMaxWidth / (float)szSample.cx + 0.5f);
-		HFONT hNarrow = CreateFontA(nHeight, nAveWidth > 0 ? nAveWidth : 1, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
-									OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
-									DEFAULT_PITCH | FF_DONTCARE, s_aszFace[nFace]);
-		if (hNarrow)
+		int nSmaller = (int)((float)nHeight * (float)nMaxWidth / (float)szSample.cx + 0.5f);
+		HFONT hSmaller = CreateFontA(nSmaller > 6 ? nSmaller : 6, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+									 OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+									 DEFAULT_PITCH | FF_DONTCARE, s_aszFace[nFace]);
+		if (hSmaller)
 		{
-			SelectObject(hDC, hNarrow);
+			SelectObject(hDC, hSmaller);
 			DeleteObject(hFont);
-			hFont = hNarrow;
+			hFont = hSmaller;
 			GetTextMetricsA(hDC, &tm);
 		}
 	}
-	uint32 nCell = (uint32)tm.tmHeight;
 	SIZE szSpace;
 	uint32 nSpace = GetTextExtentPoint32A(hDC, " ", 1, &szSpace) ? (uint32)szSpace.cx : 0;
 

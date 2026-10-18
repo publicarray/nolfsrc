@@ -21,9 +21,10 @@ class CLTGUIFont;
 int         P3_TTF_Enabled();
 
 // The font remade from the TrueType font, its glyphs nRetailHeight (the
-// retail bitmap font's height) times fScale pixels high, and condensed, if
-// they are wider, so P3_TTF_WIDTH_SAMPLE is no wider than nRetailWidth (the
-// retail font's width of it; 0: as the face has it) times fScale. False when
+// retail bitmap font's height) times fScale pixels high, or smaller (its
+// proportions kept, in a cell that high) so P3_TTF_WIDTH_SAMPLE is no wider
+// than nRetailWidth (the retail font's width of it; 0: as the face has it)
+// times fScale. False when
 // the TrueType font is not in use or could not be drawn; the font is then
 // as it was.
 #define P3_TTF_WIDTH_SAMPLE "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
