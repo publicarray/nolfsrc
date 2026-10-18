@@ -37,6 +37,7 @@ static_assert(sizeof(LMAnim) == 0x60, "LMAnim");
 struct MRLMAtlas {
     uint32_t      m_Id;
     uint32_t    m_nSize;                // square
+    uint32_t    m_nScale;               // texels per lightmap texel (LightmapSmooth)
     uint32_t    m_ShelfX, m_ShelfY, m_ShelfH;
     uint8_t*    m_pRGB;                 // m_nSize^2 * 3, kept for animated updates
     bool        m_bDirty;

@@ -68,6 +68,7 @@ enum {
     CV_LightSaturate, CV_FastLight, CV_ModelApplySun, CV_ModelSunVariance,
     CV_EnvMapWorld, CV_EnvMapEnable, CV_EnvMapAll, CV_EnvScale, CV_EnvPanSpeed, CV_EnvMapPolyGrids,
     CV_MaxModelShadows, CV_ModelShadowAlpha, CV_ModelShadowOffset, CV_Antialiasing,
+    CV_LightmapSmooth,
     CV_Count
 };
 extern MRVar g_Vars[CV_Count];

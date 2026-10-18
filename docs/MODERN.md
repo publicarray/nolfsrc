@@ -103,6 +103,7 @@ typed as `+Name value`; see `VARIABLES.md`.
 | `DisplayTriggers` | int | 0 | server: draw trigger volumes as yellow boxes (type it into the console: M-P2-08 passes it on) | M-P2-11 |
 | `EnableScreenTinting` | int | 1 | 0 = draw screen tints with a 2D overlay instead of the camera's light add (Intel fix; Display options "Intel graphics fix" sets both; `d3d7.ren` only) | M-P1-10 |
 | `EnableLightScale` | int | 1 | 0 = keep the global light scale at 1: no light scaling at all (Intel fix; `d3d7.ren` only) | M-P1-10 |
+| `LightmapSmooth` | int | 4 | the world's lightmaps stored this many times larger (1-8), resampled with a cubic B-spline, so baked light and shadows fall off smoothly instead of in bilinear blocks and 5-bit bands; 1 = the shipped renderers' look; applies from the next level loaded (`d3d9.ren`, `opengl.ren`) | -- |
 | `ModPatchNum` | float | 0 | last modern-build config version seen (`P1_CONFIG_VERSION`, now 1.5); drives one-time upgrades | M-P1-12 |
 | `PadLookSpeed` | float | 1 | the controller's right stick: turn rate, times 180 degrees a second across and 120 up and down; Controller options' "Look speed" | M-P7-03 |
 | `PadInvertY` | int | 0 | the right stick's up looks down; Controller options' "Invert look" | M-P7-03 |

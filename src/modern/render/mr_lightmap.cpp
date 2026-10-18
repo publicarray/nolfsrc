@@ -9,10 +9,19 @@
 // gets a one-texel border copied from its edge (so bilinear filtering never
 // reaches a neighbour, which the 64x64 pages allowed), and the vertex
 // lightmap coordinates are computed at draw time from the same basis.
+//
+// LightmapSmooth (default 4; 1 is the shipped renderers' look) stores each
+// lightmap that many times larger, resampled with a cubic B-spline: the
+// lighting the level was built with, its 32x32-at-most texels no longer
+// drawn as bilinear blocks and its 5-bit steps no longer as bands. It takes
+// effect when a world is bound.
+
+#include <math.h>
 
 #include "mrscene.h"
 
-#define ATLAS_SIZE 512
+#define ATLAS_SIZE 512                  // at LightmapSmooth 1; times the scale
+#define LM_MAXSCALE 8
 
 // ---- the engine's data -------------------------------------------------------------
 
@@ -243,10 +252,85 @@ static bool mr_ComposePolyLM(MainWorld* pWorld, WorldPoly* pPoly, uint16_t* pAcc
     return true;
 }
 
+// The cubic B-spline's four weights at fraction t: smooth (no overshoot,
+// so no rings round a light's edge), at the cost of a little softening.
+static inline void mr_BSpline(float t, float* w)
+{
+    float t2 = t * t, t3 = t2 * t;
+    w[0] = (1.0f - 3.0f * t + 3.0f * t2 - t3) / 6.0f;
+    w[1] = (4.0f - 6.0f * t2 + 3.0f * t3) / 6.0f;
+    w[2] = (1.0f + 3.0f * t + 3.0f * t2 - 3.0f * t3) / 6.0f;
+    w[3] = t3 / 6.0f;
+}
+
+// A poly's texels resampled s times larger into its atlas place, with the
+// one-texel border: each atlas texel's centre at lightmap texel
+// (X + 0.5) / s - 0.5, the 4x4 texels round it weighted, the lightmap's
+// edge texels standing in past its edge.
+static void mr_StoreScaledLM(const MRPolyLM* pLM, uint32_t w, uint32_t h, const uint16_t* pTexels, uint32_t s)
+{
+    MRLMAtlas* pAtlas = pLM->m_pAtlas;
+    static float rgb[LM_MAXTEXELS][3];
+    for (uint32_t i = 0; i < w * h; i++)
+    {
+        uint16_t c = pTexels[i];
+        rgb[i][0] = (float)((c >> 10) & 31) * (255.0f / 31.0f);
+        rgb[i][1] = (float)((c >> 5) & 31) * (255.0f / 31.0f);
+        rgb[i][2] = (float)(c & 31) * (255.0f / 31.0f);
+    }
+    int W = (int)(w * s), H = (int)(h * s);
+    for (int Y = -1; Y <= H; Y++)
+    {
+        int cy = Y < 0 ? 0 : Y >= H ? H - 1 : Y;
+        float fy = ((float)cy + 0.5f) / (float)s - 0.5f;
+        int iy = (int)floorf(fy);
+        float wy[4];
+        mr_BSpline(fy - (float)iy, wy);
+        uint8_t* pRow = pAtlas->m_pRGB + ((pLM->m_Y + Y) * pAtlas->m_nSize + pLM->m_X - 1) * 3;
+        for (int X = -1; X <= W; X++)
+        {
+            int cx = X < 0 ? 0 : X >= W ? W - 1 : X;
+            float fx = ((float)cx + 0.5f) / (float)s - 0.5f;
+            int ix = (int)floorf(fx);
+            float wx[4];
+            mr_BSpline(fx - (float)ix, wx);
+            float acc[3] = { 0.0f, 0.0f, 0.0f };
+            for (int j = 0; j < 4; j++)
+            {
+                int sy = iy - 1 + j;
+                sy = sy < 0 ? 0 : sy >= (int)h ? (int)h - 1 : sy;
+                for (int i = 0; i < 4; i++)
+                {
+                    int sx = ix - 1 + i;
+                    sx = sx < 0 ? 0 : sx >= (int)w ? (int)w - 1 : sx;
+                    float k = wx[i] * wy[j];
+                    const float* t = rgb[sy * w + sx];
+                    acc[0] += t[0] * k;
+                    acc[1] += t[1] * k;
+                    acc[2] += t[2] * k;
+                }
+            }
+            for (int k = 0; k < 3; k++)
+                pRow[k] = (uint8_t)(acc[k] < 0.0f ? 0 : acc[k] > 255.0f ? 255 : (int)(acc[k] + 0.5f));
+            pRow += 3;
+        }
+    }
+    pAtlas->m_bDirty = true;
+    if (pLM->m_Y - 1u < pAtlas->m_DirtyY0)
+        pAtlas->m_DirtyY0 = pLM->m_Y - 1;
+    if (pLM->m_Y + H + 1 > pAtlas->m_DirtyY1)
+        pAtlas->m_DirtyY1 = pLM->m_Y + H + 1;
+}
+
 // Write a poly's 5:5:5 texels into its atlas, with the one-texel border.
 static void mr_StorePolyLM(const MRPolyLM* pLM, uint32_t w, uint32_t h, const uint16_t* pTexels)
 {
     MRLMAtlas* pAtlas = pLM->m_pAtlas;
+    if (pAtlas->m_nScale > 1)
+    {
+        mr_StoreScaledLM(pLM, w, h, pTexels, pAtlas->m_nScale);
+        return;
+    }
     for (int y = -1; y <= (int)h; y++)
     {
         int sy = y < 0 ? 0 : y >= (int)h ? (int)h - 1 : y;
@@ -270,13 +354,14 @@ static void mr_StorePolyLM(const MRPolyLM* pLM, uint32_t w, uint32_t h, const ui
 
 // ---- packing --------------------------------------------------------------------------
 
-static MRLMAtlas* mr_NewAtlas(MRContext* pContext)
+static MRLMAtlas* mr_NewAtlas(MRContext* pContext, uint32_t nScale)
 {
     MRLMAtlas* pAtlas = (MRLMAtlas*)calloc(1, sizeof(MRLMAtlas));
     if (!pAtlas)
         return NULL;
-    pAtlas->m_nSize = ATLAS_SIZE;
-    pAtlas->m_pRGB = (uint8_t*)calloc(ATLAS_SIZE * ATLAS_SIZE, 3);
+    pAtlas->m_nScale = nScale;
+    pAtlas->m_nSize = ATLAS_SIZE * nScale;
+    pAtlas->m_pRGB = (uint8_t*)calloc((size_t)pAtlas->m_nSize * pAtlas->m_nSize, 3);
     if (!pAtlas->m_pRGB)
     {
         free(pAtlas);
@@ -289,9 +374,9 @@ static MRLMAtlas* mr_NewAtlas(MRContext* pContext)
 
 // Shelf packing: rows of lightmaps, left to right, a new row when one is
 // full, a new atlas when the rows are.
-static bool mr_Place(MRContext* pContext, uint32_t w, uint32_t h, MRPolyLM* pLM)
+static bool mr_Place(MRContext* pContext, uint32_t w, uint32_t h, uint32_t nScale, MRPolyLM* pLM)
 {
-    uint32_t bw = w + 2, bh = h + 2;
+    uint32_t bw = w * nScale + 2, bh = h * nScale + 2;
     MRLMAtlas* pAtlas = pContext->m_pAtlases;
     if (pAtlas && pAtlas->m_ShelfX + bw > pAtlas->m_nSize)
     {
@@ -301,7 +386,7 @@ static bool mr_Place(MRContext* pContext, uint32_t w, uint32_t h, MRPolyLM* pLM)
     }
     if (!pAtlas || pAtlas->m_ShelfY + bh > pAtlas->m_nSize)
     {
-        pAtlas = mr_NewAtlas(pContext);
+        pAtlas = mr_NewAtlas(pContext, nScale);
         if (!pAtlas)
             return false;
     }
@@ -371,6 +456,8 @@ bool mr_BuildLightmaps(MRContext* pContext)
         return false;
     pContext->m_nContextGen = g.nContextGen;
 
+    int nScale = cvi(CV_LightmapSmooth);
+    nScale = nScale < 1 ? 1 : nScale > LM_MAXSCALE ? LM_MAXSCALE : nScale;
     uint16_t texels[LM_MAXTEXELS];
     uint32_t nPlaced = 0;
     for (uint32_t i = 0; i < pBase->m_nPolies; i++)
@@ -383,7 +470,7 @@ bool mr_BuildLightmaps(MRContext* pContext)
         if (!w || !h || w * h > LM_MAXTEXELS)
             continue;
         MRPolyLM* pLM = &pContext->m_pPolyLMs[nPlaced];
-        if (!mr_Place(pContext, w, h, pLM))
+        if (!mr_Place(pContext, w, h, (uint32_t)nScale, pLM))
             break;
         if (!mr_ComposePolyLM(pWorld, pPoly, texels))
             continue;
@@ -398,7 +485,7 @@ bool mr_BuildLightmaps(MRContext* pContext)
     int nAtlases = 0;
     for (MRLMAtlas* p = pContext->m_pAtlases; p; p = p->m_pNext)
         nAtlases++;
-    mr_Debug(1, "%u lightmaps in %d atlases of %d", nPlaced, nAtlases, ATLAS_SIZE);
+    mr_Debug(1, "%u lightmaps in %d atlases of %d (LightmapSmooth %d)", nPlaced, nAtlases, ATLAS_SIZE * nScale, nScale);
     return nPlaced > 0;
 }
 
