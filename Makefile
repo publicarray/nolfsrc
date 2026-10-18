@@ -4,6 +4,7 @@
 #   make test     scripted playtest of out/nolf-legacy-release/ on two levels
 #   make test-modern  the same playtest of out/nolf-modern-release/
 #   make test-compare both, and each level's shots side by side, legacy | modern
+#   make test-renderers  scenes of out/nolf-modern-release/ with each renderer, beside d3d.ren's
 #   make debug    the same game with symbols and debug logging, in out/nolf-legacy-debug/
 #   make modern   the game with the retail bugs fixed (NOLFSRC_MODERN), in out/nolf-modern-release/
 #   make progress how much of the build is byte-identical to the retail game;
@@ -24,6 +25,10 @@ CONTAINER ?= nolfsrc-build
 TEST_LEVELS ?= T01S01 M03S01
 # The playtests' screen mode, e.g. 1920x1080 (empty: the game directory's own)
 TEST_RES ?=
+# make test-renderers: <level>:<script> scenes (build/scenes/), and the
+# renderers, the first the reference the others are put beside
+TEST_SCENES ?= T01S02:build/scenes/T01S02-bottle.txt
+TEST_RENDERERS ?= d3d.ren d3d9.ren opengl.ren
 # Parallel compile jobs inside the build (build/build.mk); empty: one per CPU
 JOBS ?=
 
@@ -42,7 +47,7 @@ TOOLCHAIN_FILES = toolchains/msvc-6.00-9782/VC98/Bin/CL.EXE \
 	toolchains/msvc-6.00-8447/BIN/cl.exe \
 	toolchains/icl-4.0/BIN/icl.exe
 
-.PHONY: all game debug modern modern-debug image retail check-rez check-tools check-ext check-toolchain test test-modern test-compare progress progress-update shell clean distclean help
+.PHONY: all game debug modern modern-debug image retail check-rez check-tools check-ext check-toolchain test test-modern test-compare test-renderers progress progress-update shell clean distclean help
 
 all: game
 
@@ -56,6 +61,8 @@ help:
 	@echo "make test-modern  the same of out/nolf-modern-release/"
 	@echo "make test-compare both, then out/play/compare-test-<level>-test-modern-<level>.jpg:"
 	@echo "                each shot, legacy left and modern right (TEST_RES=1920x1080 for a wide screen)"
+	@echo "make test-renderers  the scenes of TEST_SCENES in out/nolf-modern-release/ with each of"
+	@echo "                TEST_RENDERERS, then out/play/compare-<scene>-d3d-<scene>-<renderer>.jpg"
 	@echo "make progress   score the build against the retail binaries; fails if a"
 	@echo "                function recorded in progress/identical.txt stops matching"
 	@echo "make progress-update  record the score in progress/ and README.md"
@@ -146,6 +153,28 @@ test-compare: check-tools image
 	  echo "== compare: Worlds\\$$w, legacy | modern"; \
 	  $(DOCKER_RUN) env PLAYTEST_COMPARE_SIZE=640x480 PLAYTEST_COMPARE_EXT=jpg bash build/playtest.sh compare test-$$w test-modern-$$w; \
 	done; echo "== side by side: out/play/compare-test-*-test-modern-*.jpg"; exit $$rc
+
+# Each scene (TEST_SCENES) of the modern build with each renderer, then the
+# first renderer's shots beside each other's: the same build, so the same
+# timing, and d3d.ren is the reference d3d9.ren and opengl.ren are held to
+test-renderers: check-tools image
+	@[ -f out/nolf-modern-release/lithtech.exe ] || { echo "error: no out/nolf-modern-release/ -- run make modern first" >&2; exit 1; }
+	@mkdir -p out/play; rc=0; for sc in $(TEST_SCENES); do \
+	  w=$${sc%%:*}; s=$${sc#*:}; n=$$(basename $$s .txt); ref=; \
+	  for r in $(TEST_RENDERERS); do \
+	    rn=$${r%.ren}; [ -n "$$ref" ] || ref=$$rn; \
+	    echo "\"RenderDll\" \"$$r\"" > out/play/renderer-$$rn.cfg; \
+	    echo "== scene: $$n (Worlds\\$$w) with $$r"; \
+	    $(DOCKER_RUN) env PLAYTEST_SCRIPT=$$s PLAYTEST_NAME=$$n-$$rn PLAYTEST_CFG=out/play/renderer-$$rn.cfg \
+	      $(if $(TEST_RES),PLAYTEST_RES=$(TEST_RES)) \
+	      bash build/playtest.sh out/nolf-modern-release "Worlds\\$$w" || rc=1; \
+	  done; \
+	  for r in $(TEST_RENDERERS); do \
+	    rn=$${r%.ren}; [ $$rn = $$ref ] && continue; \
+	    echo "== compare: $$n, $$ref | $$rn"; \
+	    $(DOCKER_RUN) env PLAYTEST_COMPARE_SIZE=640x480 PLAYTEST_COMPARE_EXT=jpg bash build/playtest.sh compare $$n-$$ref $$n-$$rn; \
+	  done; \
+	done; echo "== side by side: out/play/compare-*-$(firstword $(TEST_RENDERERS:.ren=))-*.jpg"; exit $$rc
 
 progress: retail
 	$(DOCKER_RUN) env COMPLETE=$(COMPLETE) COVERED=$(COVERED) bash build/progress.sh check

@@ -1,0 +1,27 @@
+# T01S02-bottle.txt -- a scene for build/playtest.sh (make test-renderers):
+# T01S02's opening cinematic, "Residence of Cate Archer", as the camera pans
+# along the bathroom shelf past the perfume, the wine bottle and the glass.
+# d3d9.ren and opengl.ren drew the models' back faces, and the chrome
+# passes translucent (the bottle and the glass see-through), where d3d.ren
+# does not. Timed for the modern build, which plays the cinematic at its
+# speed (60 fps, M-P1-01); the legacy build, uncapped, runs through it about
+# twice as fast.
+window 240
+cinestart 120
+# the shelf from about 18s in, the bottle and the glass at 22-30s
+wait 18
+shot shelf-18s
+wait 2
+shot shelf-20s
+wait 2
+shot shelf-22s
+wait 2
+shot bottle-24s
+wait 2
+shot bottle-26s
+wait 2
+shot glass-28s
+wait 2
+shot glass-30s
+wait 2
+shot shelf-32s
