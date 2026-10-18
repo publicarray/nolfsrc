@@ -380,13 +380,20 @@ def cmd_openruntime(extdir, gamedir):
         print(f"   {name}  <-  {origin}")
     ndm = install_directmusic(gamedir, man)
     # The modern build's TrueType fonts (nolfsrc M-P3-24, M-P3-25), each
-    # with its licence; a game without src/modern/fonts has none.
+    # with its licence; a game without src/modern/fonts has none. A font
+    # with no <Family>-OFL.txt beside it (adlib.ttf, which a developer adds
+    # by hand: the repository has none) may not be passed on: it is LOCAL,
+    # and build/package.sh leaves it out of the public archive.
     fonts = sorted(p.name for p in FONT_SRC.iterdir() if p.is_file()) if FONT_SRC.is_dir() else []
     if fonts:
         (gamedir / "fonts").mkdir(exist_ok=True)
     for name in fonts:
         shutil.copyfile(FONT_SRC / name, gamedir / "fonts" / name)
-        man.add("fonts/" + name, f"THIRD-PARTY font (SIL OFL 1.1): src/modern/fonts/{name}")
+        if name.endswith("-OFL.txt") or name.split("-")[0] + "-OFL.txt" in fonts:
+            origin = f"THIRD-PARTY font (SIL OFL 1.1): src/modern/fonts/{name}"
+        else:
+            origin = f"LOCAL font (no licence to redistribute): src/modern/fonts/{name}"
+        man.add("fonts/" + name, origin)
         print(f"   fonts/{name}  <-  src/modern/fonts/")
     man.save()
     print(f"== open runtime: {len(OPEN_RUNTIME)} files (OpenMiles, Bink on FFmpeg, the OpenGL and Direct3D 9 renderers)"

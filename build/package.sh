@@ -80,6 +80,10 @@ elif [ $rc != 0 ]; then
     exit $rc
 else
     sed "s|^|$NAME/|" "$PARENT/$STAGE/disc-files.txt" > "$PARENT/$STAGE/exclude.txt"
+    # and the files MANIFEST.txt says may not be passed on (build/retailextract.py)
+    if [ -f "$OUT/MANIFEST.txt" ]; then
+        awk -F'\t' -v n="$NAME" '$1 ~ /^LOCAL / { print n "/" $2 }' "$OUT/MANIFEST.txt" >> "$PARENT/$STAGE/exclude.txt"
+    fi
     tar -C "$PARENT" -h -cf "$PARENT/$STAGE/public.tar" \
         --exclude="$NAME/Save/*" --exclude="$NAME/nolfcmds.txt" --exclude="$NAME/NetHost.txt" \
         --exclude='*.log' --exclude=run-cmds.txt --exclude=cd --exclude='*.part' \
