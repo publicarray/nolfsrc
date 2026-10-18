@@ -4,7 +4,7 @@
 #   make test     scripted playtest of out/nolf-legacy-release/ on two levels
 #   make test-modern  the same playtest of out/nolf-modern-release/
 #   make test-compare both, and each level's shots side by side, legacy | modern
-#   make test-renderers  scenes of out/nolf-modern-release/ with each renderer, beside d3d.ren's
+#   make test-renderers  scenes of out/nolf-modern-release/ with each renderer, beside d3d7.ren's
 #   make debug    the same game with symbols and debug logging, in out/nolf-legacy-debug/
 #   make modern   the game with the retail bugs fixed (NOLFSRC_MODERN), in out/nolf-modern-release/
 #   make progress how much of the build is byte-identical to the retail game;
@@ -28,7 +28,7 @@ TEST_RES ?=
 # make test-renderers: <level>:<script> scenes (build/scenes/), and the
 # renderers, the first the reference the others are put beside
 TEST_SCENES ?= T01S02:build/scenes/T01S02-bottle.txt
-TEST_RENDERERS ?= d3d.ren d3d9.ren opengl.ren
+TEST_RENDERERS ?= d3d7.ren d3d9.ren opengl.ren
 # Parallel compile jobs inside the build (build/build.mk); empty: one per CPU
 JOBS ?=
 
@@ -62,7 +62,7 @@ help:
 	@echo "make test-compare both, then out/play/compare-test-<level>-test-modern-<level>.jpg:"
 	@echo "                each shot, legacy left and modern right (TEST_RES=1920x1080 for a wide screen)"
 	@echo "make test-renderers  the scenes of TEST_SCENES in out/nolf-modern-release/ with each of"
-	@echo "                TEST_RENDERERS, then out/play/compare-<scene>-d3d-<scene>-<renderer>.jpg"
+	@echo "                TEST_RENDERERS, then out/play/compare-<scene>-d3d7-<scene>-<renderer>.jpg"
 	@echo "make progress   score the build against the retail binaries; fails if a"
 	@echo "                function recorded in progress/identical.txt stops matching"
 	@echo "make progress-update  record the score in progress/ and README.md"
@@ -156,7 +156,9 @@ test-compare: check-tools image
 
 # Each scene (TEST_SCENES) of the modern build with each renderer, then the
 # first renderer's shots beside each other's: the same build, so the same
-# timing, and d3d.ren is the reference d3d9.ren and opengl.ren are held to
+# timing, and d3d7.ren (DirectX 7) is the reference d3d9.ren and opengl.ren
+# are held to. A renderer the game does not load (it falls back to its
+# default, and saves that in autoexec.cfg) fails the run
 test-renderers: check-tools image
 	@[ -f out/nolf-modern-release/lithtech.exe ] || { echo "error: no out/nolf-modern-release/ -- run make modern first" >&2; exit 1; }
 	@mkdir -p out/play; rc=0; for sc in $(TEST_SCENES); do \
@@ -168,6 +170,8 @@ test-renderers: check-tools image
 	    $(DOCKER_RUN) env PLAYTEST_SCRIPT=$$s PLAYTEST_NAME=$$n-$$rn PLAYTEST_CFG=out/play/renderer-$$rn.cfg \
 	      $(if $(TEST_RES),PLAYTEST_RES=$(TEST_RES)) \
 	      bash build/playtest.sh out/nolf-modern-release "Worlds\\$$w" || rc=1; \
+	    used=$$(grep -i '^"RenderDll"' out/play/$$n-$$rn/autoexec.cfg | tail -1 | cut -d'"' -f4); \
+	    [ "$$used" = "$$r" ] || { echo "== FAILED: $$n ran with $${used:-no renderer}, not $$r"; rc=1; }; \
 	  done; \
 	  for r in $(TEST_RENDERERS); do \
 	    rn=$${r%.ren}; [ $$rn = $$ref ] && continue; \
