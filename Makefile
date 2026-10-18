@@ -2,6 +2,8 @@
 #
 #   make          build the whole game into out/nolf-legacy-release/ (and its -private / -public .tar.gz)
 #   make test     scripted playtest of out/nolf-legacy-release/ on two levels
+#   make test-modern  the same playtest of out/nolf-modern-release/
+#   make test-compare both, and each level's shots side by side, legacy | modern
 #   make debug    the same game with symbols and debug logging, in out/nolf-legacy-debug/
 #   make modern   the game with the retail bugs fixed (NOLFSRC_MODERN), in out/nolf-modern-release/
 #   make progress how much of the build is byte-identical to the retail game;
@@ -20,6 +22,8 @@
 IMAGE     ?= nolfsrc-build
 CONTAINER ?= nolfsrc-build
 TEST_LEVELS ?= T01S01 M03S01
+# The playtests' screen mode, e.g. 1920x1080 (empty: the game directory's own)
+TEST_RES ?=
 # Parallel compile jobs inside the build (build/build.mk); empty: one per CPU
 JOBS ?=
 
@@ -38,7 +42,7 @@ TOOLCHAIN_FILES = toolchains/msvc-6.00-9782/VC98/Bin/CL.EXE \
 	toolchains/msvc-6.00-8447/BIN/cl.exe \
 	toolchains/icl-4.0/BIN/icl.exe
 
-.PHONY: all game debug modern modern-debug image retail check-rez check-tools check-ext check-toolchain test progress progress-update shell clean distclean help
+.PHONY: all game debug modern modern-debug image retail check-rez check-tools check-ext check-toolchain test test-modern test-compare progress progress-update shell clean distclean help
 
 all: game
 
@@ -49,6 +53,9 @@ help:
 	@echo "make modern-debug  both, in out/nolf-modern-debug/"
 	@echo "                (none of these is ever scored; build/variant.sh)"
 	@echo "make test       scripted playtest of out/nolf-legacy-release/ ($(TEST_LEVELS)), under Xvfb"
+	@echo "make test-modern  the same of out/nolf-modern-release/"
+	@echo "make test-compare both, then out/play/compare-test-<level>-test-modern-<level>.jpg:"
+	@echo "                each shot, legacy left and modern right (TEST_RES=1920x1080 for a wide screen)"
 	@echo "make progress   score the build against the retail binaries; fails if a"
 	@echo "                function recorded in progress/identical.txt stops matching"
 	@echo "make progress-update  record the score in progress/ and README.md"
@@ -59,7 +66,7 @@ help:
 	@echo "make clean      remove out/ and every build output in the source tree"
 	@echo "make distclean  clean, and remove the docker image too"
 	@echo
-	@echo "Variables: TEST_LEVELS=\"$(TEST_LEVELS)\", JOBS=<n> (parallel compiles; default one per CPU)"
+	@echo "Variables: TEST_LEVELS=\"$(TEST_LEVELS)\", TEST_RES=<WxH>, JOBS=<n> (parallel compiles; default one per CPU)"
 	@echo "           NOLF_ARCHIVES=\"private public\" (the archives build/package.sh writes)"
 	@echo "           NOLF_SOURCE=<dir> (the NOLF Source Code v1.003 release, for"
 	@echo "           make progress), COMPLETE=1, COVERED=1, ACCEPT_LOSSES=1 (progress/README.md)"
@@ -110,15 +117,35 @@ check-toolchain:
 	  [ -f "$$f" ] || { echo "error: $$f is missing -- the compilers are the toolchains/ submodule: run git submodule update --init (see toolchains/README.md)" >&2; exit 1; }; \
 	done
 
-test: check-tools image
-	@[ -f out/nolf-legacy-release/lithtech.exe ] || { echo "error: no out/nolf-legacy-release/ -- run make first" >&2; exit 1; }
+# $(call playtest,<game directory>,<run name prefix>): the scripted playtest
+# on every level of TEST_LEVELS, its runs in out/play/<prefix><level>/
+define playtest
+	@[ -f $(1)/lithtech.exe ] || { echo "error: no $(1)/ -- build it first" >&2; exit 1; }
 	@rc=0; for w in $(TEST_LEVELS); do \
-	  echo "== playtest: Worlds\\$$w (tools/playtest-basic.txt)"; \
-	  $(DOCKER_RUN) env PLAYTEST_SCRIPT=tools/playtest-basic.txt PLAYTEST_NAME=test-$$w \
-	    bash build/playtest.sh out/nolf-legacy-release "Worlds\\$$w" || rc=1; \
+	  echo "== playtest: $(1) Worlds\\$$w (tools/playtest-basic.txt)"; \
+	  $(DOCKER_RUN) env PLAYTEST_SCRIPT=tools/playtest-basic.txt PLAYTEST_NAME=$(2)$$w \
+	    $(if $(TEST_RES),PLAYTEST_RES=$(TEST_RES)) \
+	    bash build/playtest.sh $(1) "Worlds\\$$w" || rc=1; \
 	done; \
-	if [ $$rc = 0 ]; then echo "== make test: every level ALIVE (shots in out/play/test-*/)"; \
-	else echo "== make test: FAILED (see out/play/test-*/result.txt, wine.log)"; fi; exit $$rc
+	if [ $$rc = 0 ]; then echo "== every level ALIVE (shots in out/play/$(2)*/)"; \
+	else echo "== FAILED (see out/play/$(2)*/result.txt, wine.log)"; fi; exit $$rc
+endef
+
+test: check-tools image
+	$(call playtest,out/nolf-legacy-release,test-)
+
+test-modern: check-tools image
+	$(call playtest,out/nolf-modern-release,test-modern-)
+
+# The two one after the other (their containers share a name), then the
+# shots side by side, 640x480 each (the contact sheet's are 320x240)
+test-compare: check-tools image
+	@rc=0; $(MAKE) --no-print-directory test || rc=1; \
+	$(MAKE) --no-print-directory test-modern || rc=1; \
+	for w in $(TEST_LEVELS); do \
+	  echo "== compare: Worlds\\$$w, legacy | modern"; \
+	  $(DOCKER_RUN) env PLAYTEST_COMPARE_SIZE=640x480 PLAYTEST_COMPARE_EXT=jpg bash build/playtest.sh compare test-$$w test-modern-$$w; \
+	done; echo "== side by side: out/play/compare-test-*-test-modern-*.jpg"; exit $$rc
 
 progress: retail
 	$(DOCKER_RUN) env COMPLETE=$(COMPLETE) COVERED=$(COVERED) bash build/progress.sh check

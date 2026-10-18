@@ -91,7 +91,10 @@
 # compares two scripted runs (directory names under out/play/, e.g. two
 # PLAYTEST_NAMEs): per shot, the normalised RMSE between the two frames (0 = same,
 # roughly < 0.1 = the same view, > 0.2 = a different screen), and writes
-# out/play/compare-<runA>-<runB>.png (A left, B right, one row per shot).
+# out/play/compare-<runA>-<runB>.png (A left, B right, one row per shot,
+# each PLAYTEST_COMPARE_SIZE, default 320x240; PLAYTEST_COMPARE_EXT=jpg
+# writes a JPEG; `make test-compare` makes a 640x480 one, small enough
+# to attach to a pull request).
 set -u
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 for t in wine xvfb-run xdotool convert; do
@@ -105,7 +108,7 @@ if [ "${1:-}" = compare ]; then
         r=$(compare -metric RMSE $f $B/shots/$b null: 2>&1 | sed 's/.*(\(.*\))/\1/')
         printf '%-24s %s\n' "$b" "$r"; L+=($f $B/shots/$b)
     done
-    [ ${#L[@]} -gt 0 ] && montage -label '%d/%f' -pointsize 9 "${L[@]}" -tile 2x -geometry 320x240+2+2 compare-$A-$B.png
+    [ ${#L[@]} -gt 0 ] && montage -label '%d/%f' -pointsize 9 "${L[@]}" -tile 2x -geometry ${PLAYTEST_COMPARE_SIZE:-320x240}+2+2 -depth 8 -quality 85 compare-$A-$B.${PLAYTEST_COMPARE_EXT:-png}
     exit
 fi
 GAMEDIR="${1:-out/nolf-legacy-release}"
