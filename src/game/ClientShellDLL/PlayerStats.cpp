@@ -12,6 +12,9 @@
 
 #include "stdafx.h"
 #include "PlayerStats.h"
+#ifdef NOLFSRC_MODERN
+#include "UIArtScale.h"
+#endif
 #include "WeaponMgr.h"
 #include <stdio.h>
 #include "GameClientShell.h"
@@ -4044,6 +4047,14 @@ void CPlayerStats::UpdateWeaponBindings()
 		m_nIconSize = 0;
 		if (pWeapon)
 		{
+#ifdef NOLFSRC_MODERN
+			// The large icon either way, drawn at the small icon's size
+			// when BindingIconSize is 0: the HUD scales it up, and the 24px
+			// art is too coarse for that (HD UI packs leave it retail).
+			m_hWeaponSurf[i] = g_pLTClient->CreateSurfaceFromBitmap(pWeapon->szIcon);
+			if (!m_hWeaponSurf[i] && !bLarge)
+				m_hWeaponSurf[i] = g_pLTClient->CreateSurfaceFromBitmap(pWeapon->szSmallIcon);
+#else
 			if (bLarge)
 			{
 				m_hWeaponSurf[i] = g_pLTClient->CreateSurfaceFromBitmap(pWeapon->szIcon);
@@ -4052,12 +4063,17 @@ void CPlayerStats::UpdateWeaponBindings()
 			{
 				m_hWeaponSurf[i] = g_pLTClient->CreateSurfaceFromBitmap(pWeapon->szSmallIcon);
 			}
+#endif
 			if (m_hWeaponSurf[i])
 			{
 				if (!m_nIconSize)
 				{
 					uint32 h;
 					g_pLTClient->GetSurfaceDims(m_hWeaponSurf[i],&m_nIconSize,&h);
+#ifdef NOLFSRC_MODERN
+					// HD UI packs: lay out at the retail icon size
+					m_nIconSize = bLarge ? 48 : 24;
+#endif
 				}
 				g_pLTClient->OptimizeSurface(m_hWeaponSurf[i],SETRGB(255,0,255));
 				g_pLTClient->SetSurfaceAlpha(m_hWeaponSurf[i],m_fWeaponAlpha);
@@ -4307,9 +4323,19 @@ void CPlayerStats::P3DrawBoundWeapons(HSURFACE hScreen, float fScale)
 {
 	if (m_fWeaponAlpha < 0.1f) return;
 
-	int nIconSize = (int)((float)m_nIconSize * fScale);
 	int w = (int)g_pInterfaceResMgr->GetScreenWidth();
-	int y = (int)g_pInterfaceResMgr->GetScreenHeight()/2 - 5*nIconSize;
+	int h = (int)g_pInterfaceResMgr->GetScreenHeight();
+	// UIArtScale, as the choosers, times BindingIconScale: capped so the ten
+	// icons fit the screen
+	if (m_nIconSize)
+	{
+		float fFit = (float)h / (10.0f * (float)m_nIconSize * fScale);
+		float f = UIArtUserScale(fFit) * GetConsoleFloat("BindingIconScale",1.33f);
+		if (f > fFit) f = fFit;
+		fScale *= (f < 1.0f) ? 1.0f : f;
+	}
+	int nIconSize = (int)((float)m_nIconSize * fScale);
+	int y = h/2 - 5*nIconSize;
 
 	HLTCOLOR hTextColor = kWhite;
 	if (m_fWeaponAlpha < 1.0f)
@@ -4318,9 +4344,6 @@ void CPlayerStats::P3DrawBoundWeapons(HSURFACE hScreen, float fScale)
 		hTextColor = SETRGB(fade,fade,fade);
 	}
 
-	int nTextOffset = nIconSize - 8;
-	if (m_bLargeNumbers)
-		nTextOffset -= 8;
 	for (int i = 0; i < 10; i++)
 	{
 		if (m_pbHaveWeapon && m_pbHaveWeapon[m_nBoundWeapons[i]] && m_hWeaponSurf[i])
@@ -4333,9 +4356,19 @@ void CPlayerStats::P3DrawBoundWeapons(HSURFACE hScreen, float fScale)
 			if (m_fIconOffset[i] > (LTFLOAT)nIconSize)
 				m_fIconOffset[i] = (LTFLOAT)nIconSize;
 			int x = w-(int)m_fIconOffset[i];
-			P3_DrawScaledSolid(hScreen, m_hWeaponSurf[i], x, y, fScale);
-			if (GetConsoleInt("BindingNumbers",1) > 0)
+			// HD UI packs: an upscaled icon at the retail icon size
+			uint32 nSurfW = 0, nSurfH = 0;
+			g_pLTClient->GetSurfaceDims(m_hWeaponSurf[i], &nSurfW, &nSurfH);
+			float fIconScale = (nSurfW && m_nIconSize) ? fScale * (float)m_nIconSize / (float)nSurfW : fScale;
+			P3_DrawScaledSolid(hScreen, m_hWeaponSurf[i], x, y, fIconScale);
+			if (GetConsoleInt("BindingNumbers",1) > 0 && m_hNumberSurf[i])
 			{
+				// in the icon's top right corner: retail starts it 8 (large
+				// icons 16) pixels in from the icon's right edge, and the
+				// number, drawn at the screen's font size, ran off the screen
+				uint32 nNumW = 0, nNumH = 0;
+				g_pLTClient->GetSurfaceDims(m_hNumberSurf[i], &nNumW, &nNumH);
+				int nTextOffset = nIconSize - (int)nNumW - 2;
 				g_pLTClient->SetOptimized2DBlend(LTSURFACEBLEND_MASK);
 				g_pLTClient->SetOptimized2DColor(hTextColor);
 				g_pLTClient->DrawSurfaceToSurface(hScreen,m_hNumberSurf[i],LTNULL,x+nTextOffset+1,y+1);
