@@ -77,6 +77,7 @@ MRVar g_Vars[CV_Count] = {
     { "EnvPanSpeed", 0.0005f }, { "EnvMapPolyGrids", 1 },
     { "MaxModelShadows", 1 }, { "ModelShadowAlpha", 230 }, { "ModelShadowOffset", 0.05f },
     { "Antialiasing", 0 },
+    { "LightmapSmooth", 4 },
 };
 
 // Find a variable, creating it with its default if the engine has none

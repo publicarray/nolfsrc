@@ -640,9 +640,12 @@ static void mr_DrawPoly(WorldPoly* pPoly, MRTexture* pTex, bool bLightmaps,
     if (pLM)
     {
         mr_LMVectors(pPoly->m_pSurface, &P, &Q);
-        fInvSize = 1.0f / pLM->m_pAtlas->m_nSize;
-        fOffU = pLM->m_X + 0.5f;
-        fOffV = pLM->m_Y + 0.5f;
+        // A lightmap texel t's centre is at m_X + (t + 0.5) * scale in
+        // the atlas (LightmapSmooth: each texel scale atlas texels wide).
+        float fScale = (float)pLM->m_pAtlas->m_nScale;
+        fInvSize = fScale / pLM->m_pAtlas->m_nSize;
+        fOffU = (pLM->m_X + 0.5f * fScale) / fScale;
+        fOffV = (pLM->m_Y + 0.5f * fScale) / fScale;
         fGrid = g_Frame.m_fLMGrid;
     }
     // r_DrawOverlayDetail: the detail texture's coordinates are the base
