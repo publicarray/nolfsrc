@@ -68,13 +68,14 @@ int P3_TTF_Enabled()
 	return P3_TTF_Wanted() && P3_TTF_Load(P3_TTF_MENU);
 }
 
-static bool P3_TTF_MakeFace(CLTGUIFont *pFont, int nFace, int nHeight, const char *szRefName);
+static bool P3_TTF_MakeFace(CLTGUIFont *pFont, int nFace, int nHeight, int nMaxWidth, const char *szRefName);
 
-bool P3_TTF_MakeFont(CLTGUIFont *pFont, int nRetailHeight, float fScale, const char *szRefName)
+bool P3_TTF_MakeFont(CLTGUIFont *pFont, int nRetailHeight, int nRetailWidth, float fScale, const char *szRefName)
 {
 	if (!pFont || !P3_TTF_Enabled())
 		return false;
-	return P3_TTF_MakeFace(pFont, P3_TTF_MENU, (int)((float)nRetailHeight * fScale + 0.5f), szRefName);
+	return P3_TTF_MakeFace(pFont, P3_TTF_MENU, (int)((float)nRetailHeight * fScale + 0.5f),
+						   (int)((float)nRetailWidth * fScale + 0.5f), szRefName);
 }
 
 CLTGUIFont *P3_TTF_ConsoleFont(int nScreenHeight)
@@ -96,13 +97,15 @@ CLTGUIFont *P3_TTF_ConsoleFont(int nScreenHeight)
 		if (!s_pFont)
 			s_pFont = new CLTGUIFont;
 		s_nHeight = nHeight;
-		s_bMade = s_pFont && P3_TTF_MakeFace(s_pFont, P3_TTF_CONSOLE, nHeight, "P3TTF_CONSOLE");
+		s_bMade = s_pFont && P3_TTF_MakeFace(s_pFont, P3_TTF_CONSOLE, nHeight, 0, "P3TTF_CONSOLE");
 	}
 	return s_bMade ? s_pFont : NULL;
 }
 
-// The font remade from face nFace, its cells nHeight pixels high.
-static bool P3_TTF_MakeFace(CLTGUIFont *pFont, int nFace, int nHeight, const char *szRefName)
+// The font remade from face nFace, its cells nHeight pixels high, its glyphs
+// smaller if need be so P3_TTF_WIDTH_SAMPLE is at most nMaxWidth wide (0: no
+// limit).
+static bool P3_TTF_MakeFace(CLTGUIFont *pFont, int nFace, int nHeight, int nMaxWidth, const char *szRefName)
 {
 	if (nHeight < 6)
 		nHeight = 6;
@@ -124,7 +127,26 @@ static bool P3_TTF_MakeFace(CLTGUIFont *pFont, int nFace, int nHeight, const cha
 
 	TEXTMETRICA tm;
 	GetTextMetricsA(hDC, &tm);
+	// Wider than the retail font (Ad Lib's glyphs are, a little, than the
+	// retail images drawn from it): the same face smaller, its proportions
+	// kept, at the top of a cell still nHeight high.
 	uint32 nCell = (uint32)tm.tmHeight;
+	SIZE szSample;
+	if (nMaxWidth > 0 && GetTextExtentPoint32A(hDC, P3_TTF_WIDTH_SAMPLE, sizeof(P3_TTF_WIDTH_SAMPLE) - 1, &szSample) &&
+		szSample.cx > nMaxWidth)
+	{
+		int nSmaller = (int)((float)nHeight * (float)nMaxWidth / (float)szSample.cx + 0.5f);
+		HFONT hSmaller = CreateFontA(nSmaller > 6 ? nSmaller : 6, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, ANSI_CHARSET,
+									 OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+									 DEFAULT_PITCH | FF_DONTCARE, s_aszFace[nFace]);
+		if (hSmaller)
+		{
+			SelectObject(hDC, hSmaller);
+			DeleteObject(hFont);
+			hFont = hSmaller;
+			GetTextMetricsA(hDC, &tm);
+		}
+	}
 	SIZE szSpace;
 	uint32 nSpace = GetTextExtentPoint32A(hDC, " ", 1, &szSpace) ? (uint32)szSpace.cx : 0;
 
