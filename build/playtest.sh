@@ -47,6 +47,11 @@
 #                         dialogue decision) in turn, every 3s; returns once
 #                         the HUD has been up for 4s, or after <timeout>
 #                         (default 90s)
+#   cinestart [timeout]   until a cinematic is on screen (the letterbox:
+#                         black bands top and bottom, a lit picture between),
+#                         or <timeout> (default 120s); the clock for timing a
+#                         cinematic's shots, since a level loads in its own
+#                         time
 #   shot <name>           screenshot the game window -> shots/NN-<name>.png
 #   focus                 re-focus the game window
 #   mmove <x> <y>         move the pointer to a point of the menus' 640x480
@@ -225,6 +230,16 @@ if [ -f script.txt ]; then
         xwd -root -silent | convert xwd:- -crop "${w}x${h}+${x}+${y}" -format '%[fx:mean.r] %[fx:mean.g]' info: 2>/dev/null |
             awk '{ exit !($1 > 0.3 && $1 > 2.5 * $2) }'
     }
+    # is a cinematic on screen? The letterbox: the window's top and bottom
+    # tenths black, its middle third lit.
+    letterbox() {
+        local b=$((WH/10)) m=$((WH/3))
+        xwd -root -silent | convert xwd:- \
+            \( +clone -crop "${WW}x${b}+${WX}+$((WY+2))" -format '%[fx:mean] ' -write info: +delete \) \
+            \( +clone -crop "${WW}x${b}+${WX}+$((WY+WH-b-2))" -format '%[fx:mean] ' -write info: +delete \) \
+            -crop "${WW}x${m}+${WX}+$((WY+m))" -format '%[fx:mean]' info: 2>/dev/null |
+            awk '{ exit !($1 < 0.02 && $2 < 0.02 && $3 > 0.08) }'
+    }
     T0=$(date +%s.%N)
     LINE=0
     while IFS= read -r raw || [ -n "$raw" ]; do
@@ -261,6 +276,10 @@ if [ -f script.txt ]; then
                     [ $k = space ] && k=Return || k=space
                 done
                 log "  skipcine done after $(( $(date +%s) - st ))s" ;;
+            cinestart)
+                to=${1:-120}; st=$(date +%s)
+                until letterbox || [ $(( $(date +%s) - st )) -ge $to ] || ! alive; do sleep 0.25; done
+                log "  cinestart after $(( $(date +%s) - st ))s$(letterbox || echo ' (timed out)')" ;;
             shot)  N=$((N+1)); f=$(printf 'shots/%02d-%s.png' $N "$1"); grab "$f"; log "  -> $f" ;;
             focus) focuswin ;;
             mmove) pagemove "$1" "$2" ;;
