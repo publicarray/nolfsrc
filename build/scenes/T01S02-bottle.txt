@@ -3,9 +3,10 @@
 # along the bathroom shelf past the perfume, the wine bottle and the glass.
 # d3d9.ren and opengl.ren drew the models' back faces, and the chrome
 # passes translucent (the bottle and the glass see-through), where d3d.ren
-# does not. Timed for the modern build; the legacy build runs through this
-# cinematic two to three times as fast (under Xvfb, not from its frame rate:
-# the modern build plays it the same capped or not), so its shots at these
+# does not. Timed for the modern build, which plays the cinematic at its
+# speed (the bathroom part about 45 s, as checked on Windows). The legacy
+# build, like the retail game, plays it faster the higher its frame rate:
+# about 18 s under Xvfb, 7 s on Windows with a fast GPU; its shots at these
 # times are of other parts of it.
 window 240
 cinestart 120
