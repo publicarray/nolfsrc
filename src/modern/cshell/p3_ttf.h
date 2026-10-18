@@ -3,8 +3,11 @@
 //
 // The game's menu fonts are bitmaps drawn for a 640x480 screen; scaled up
 // (M-P3-23) they are soft and blocky. With MenuFont 1 the menu fonts (small,
-// medium, large, help and title) are drawn instead from fonts\BowlbyOneSC-Regular.ttf
-// (SIL Open Font License, fonts\BowlbyOneSC-OFL.txt), at the size the screen needs:
+// medium, large, help and title) are drawn instead from fonts\adlib.ttf
+// (Ad Lib; not in the repository, as it has no licence to pass it on: put a
+// copy, e.g. from https://font.download/font/ad-lib, in src/modern/fonts/),
+// or without it from fonts\BowlbyOneSC-Regular.ttf (SIL Open Font License,
+// fonts\BowlbyOneSC-OFL.txt), at the size the screen needs:
 // Windows draws its glyphs, white on black and antialiased, onto a sheet the
 // game's bitmap-font code then draws from as it does from its own images.
 

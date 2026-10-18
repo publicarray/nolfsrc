@@ -24,8 +24,11 @@ typedef int (WINAPI *P3AddFontResourceEx_t)(LPCSTR, DWORD, PVOID);
 // The fonts: each file, added for this process only (it is not installed),
 // and the face it holds.
 enum { P3_TTF_MENU, P3_TTF_CONSOLE, P3_TTF_FACES };
-static const char *s_aszFile[P3_TTF_FACES] = { "fonts\\BowlbyOneSC-Regular.ttf", "fonts\\NotoSansMono-Regular.ttf" };
-static const char *s_aszFace[P3_TTF_FACES] = { "Bowlby One SC", "Noto Sans Mono" };
+static const char *s_aszFile[P3_TTF_FACES] = { "fonts\\adlib.ttf", "fonts\\NotoSansMono-Regular.ttf" };
+static const char *s_aszFace[P3_TTF_FACES] = { "Ad Lib", "Noto Sans Mono" };
+// Fallback for the menu font when adlib.ttf is absent.
+#define P3_TTF_MENU_FALLBACK_FILE "fonts\\BowlbyOneSC-Regular.ttf"
+#define P3_TTF_MENU_FALLBACK_FACE "Bowlby One SC"
 
 VarTrack g_vtP3MenuFont;
 
@@ -40,6 +43,14 @@ static int P3_TTF_Load(int nFace)
 	P3AddFontResourceEx_t pAdd = hGdi ? (P3AddFontResourceEx_t)GetProcAddress(hGdi, "AddFontResourceExA") : NULL;
 	if (pAdd && pAdd(s_aszFile[nFace], FR_PRIVATE, NULL) > 0)
 		s_anLoaded[nFace] = 1;
+	else if (pAdd && nFace == P3_TTF_MENU && pAdd(P3_TTF_MENU_FALLBACK_FILE, FR_PRIVATE, NULL) > 0)
+	{
+		// adlib.ttf may be absent: fall back to the original menu font.
+		g_pLTClient->CPrint("MenuFont: could not load %s; using %s", s_aszFile[nFace], P3_TTF_MENU_FALLBACK_FILE);
+		s_aszFile[nFace] = P3_TTF_MENU_FALLBACK_FILE;
+		s_aszFace[nFace] = P3_TTF_MENU_FALLBACK_FACE;
+		s_anLoaded[nFace] = 1;
+	}
 	else
 		g_pLTClient->CPrint("MenuFont: could not load %s; the bitmap fonts are used instead", s_aszFile[nFace]);
 	return s_anLoaded[nFace];
