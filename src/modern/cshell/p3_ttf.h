@@ -21,10 +21,13 @@ class CLTGUIFont;
 int         P3_TTF_Enabled();
 
 // The font remade from the TrueType font, its glyphs nRetailHeight (the
-// retail bitmap font's height) times fScale pixels high. False when the
-// TrueType font is not in use or could not be drawn; the font is then as
-// it was.
-bool        P3_TTF_MakeFont(CLTGUIFont *pFont, int nRetailHeight, float fScale, const char *szRefName);
+// retail bitmap font's height) times fScale pixels high, and condensed, if
+// they are wider, so P3_TTF_WIDTH_SAMPLE is no wider than nRetailWidth (the
+// retail font's width of it; 0: as the face has it) times fScale. False when
+// the TrueType font is not in use or could not be drawn; the font is then
+// as it was.
+#define P3_TTF_WIDTH_SAMPLE "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+bool        P3_TTF_MakeFont(CLTGUIFont *pFont, int nRetailHeight, int nRetailWidth, float fScale, const char *szRefName);
 
 // M-P3-25: the developer console's font (M-P2-01), Noto Sans Mono
 // (fonts\NotoSansMono-Regular.ttf) at a size for nScreenHeight, remade

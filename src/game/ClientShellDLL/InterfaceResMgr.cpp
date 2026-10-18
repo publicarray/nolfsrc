@@ -640,6 +640,7 @@ void CInterfaceResMgr::ScaleMenuFonts()
 	const int nFonts = sizeof(apFonts) / sizeof(apFonts[0]);
 	static LTFLOAT s_afTTFScale[5] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };	// 0: not drawn from it
 	static int s_anRetailHeight[5] = { 0, 0, 0, 0, 0 };
+	static int s_anRetailWidth[5] = { 0, 0, 0, 0, 0 };	// of P3_TTF_WIDTH_SAMPLE
 	static char* s_aszRef[5] = { "P3TTF_SMALL", "P3TTF_MED", "P3TTF_LARGE", "P3TTF_HELP", "P3TTF_TITLE" };
 	LTBOOL bTTF[5] = { LTFALSE, LTFALSE, LTFALSE, LTFALSE, LTFALSE };
 	if (IsEnglish() && P3_TTF_Enabled())
@@ -653,10 +654,16 @@ void CInterfaceResMgr::ScaleMenuFonts()
 				// still the retail image: its height at scale 1
 				LTFLOAT fOld = apFonts[j]->GetScale();
 				s_anRetailHeight[j] = (int)((LTFLOAT)apFonts[j]->GetHeight() / (fOld > 0.0f ? fOld : 1.0f) + 0.5f);
+				HSTRING hSample = g_pLTClient->CreateString(P3_TTF_WIDTH_SAMPLE);
+				if (hSample)
+				{
+					s_anRetailWidth[j] = (int)((LTFLOAT)apFonts[j]->GetTextExtents(hSample).x / (fOld > 0.0f ? fOld : 1.0f) + 0.5f);
+					g_pLTClient->FreeString(hSample);
+				}
 			}
 			if (s_afTTFScale[j] == fScale)
 				bTTF[j] = LTTRUE;		// already drawn at this scale
-			else if (P3_TTF_MakeFont(apFonts[j], s_anRetailHeight[j], fScale, s_aszRef[j]))
+			else if (P3_TTF_MakeFont(apFonts[j], s_anRetailHeight[j], s_anRetailWidth[j], fScale, s_aszRef[j]))
 				bTTF[j] = LTTRUE;
 			s_afTTFScale[j] = bTTF[j] ? fScale : s_afTTFScale[j];
 		}
